@@ -27,5 +27,13 @@ public class TeamMembership
     // can be tied to "this is Priya Nair" rather than just an email address.
     public Guid? EmployeeId { get; set; }
 
+    // Labels on top of the Admin role, not separate permission tiers — a Lead
+    // or Co-Lead is always an Admin underneath, so no extra role-check logic
+    // is needed anywhere else. Exactly one membership per team has IsTeamLead
+    // (the creator, until transferred); at most one has IsCoLead. Enforced in
+    // TeamsEndpoints, not at the database level.
+    public bool IsTeamLead { get; set; }
+    public bool IsCoLead { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

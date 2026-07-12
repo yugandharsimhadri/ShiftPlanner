@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
-import type { Employee, RosterEntry, ShiftType } from '../types'
-import { isWeekend, toIsoDate, weekdayLetter } from '../lib/dates'
+import type { DayOfWeekName, Employee, RosterEntry, ShiftType } from '../types'
+import { isTeamOffDay, toIsoDate, weekdayLetter } from '../lib/dates'
 import './RosterTable.css'
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
   entriesMap: Map<string, RosterEntry>
   shiftTypesByCode: Map<string, ShiftType>
   holidaySet: Set<string>
+  offDays: DayOfWeekName[]
   onCellClick: (employeeId: string, date: string, el: HTMLElement) => void
   canEdit: boolean
 }
@@ -26,6 +27,7 @@ export default function RosterTable({
   entriesMap,
   shiftTypesByCode,
   holidaySet,
+  offDays,
   onCellClick,
   canEdit,
 }: Props) {
@@ -49,20 +51,25 @@ export default function RosterTable({
       ...days.map((day) =>
         columnHelper.display({
           id: `d${day}`,
-          header: () => (
-            <div className={`day-head${isWeekend(year, month, day) ? ' weekend' : ''}${holidaySet.has(toIsoDate(year, month, day)) ? ' holiday' : ''}`}>
-              <span className="mono">{String(day).padStart(2, '0')}</span>
-              <span className="day-head-dow">{weekdayLetter(year, month, day)}</span>
-            </div>
-          ),
+          header: () => {
+            const offDay = isTeamOffDay(year, month, day, offDays)
+            return (
+              <div className={`day-head${offDay ? ' off-day' : ''}${holidaySet.has(toIsoDate(year, month, day)) ? ' holiday' : ''}`}>
+                <span className="mono">{String(day).padStart(2, '0')}</span>
+                <span className="day-head-dow">{weekdayLetter(year, month, day)}</span>
+              </div>
+            )
+          },
           cell: ({ row }) => {
             const emp = row.original
             const date = toIsoDate(year, month, day)
             const entry = entriesMap.get(`${emp.id}|${date}`)
             const shift = entry?.shiftCode ? shiftTypesByCode.get(entry.shiftCode) : undefined
+            const offDay = isTeamOffDay(year, month, day, offDays)
+            const workedOffDay = offDay && shift?.isWorkShift
             return (
               <button
-                className={`shift-cell${canEdit ? '' : ' shift-cell-readonly'}`}
+                className={`shift-cell${canEdit ? '' : ' shift-cell-readonly'}${offDay && !shift ? ' off-day' : ''}${workedOffDay ? ' comp-off-earned' : ''}`}
                 style={
                   shift
                     ? ({ '--chip-color': shift.color } as React.CSSProperties)
@@ -70,7 +77,15 @@ export default function RosterTable({
                 }
                 data-filled={!!shift}
                 onClick={(e) => canEdit && onCellClick(emp.id, date, e.currentTarget)}
-                title={shift ? `${shift.name}${entry?.source === 'Copied' ? ' (copied)' : ''}` : canEdit ? 'Unassigned' : 'No shift'}
+                title={
+                  shift
+                    ? `${shift.name}${entry?.source === 'Copied' ? ' (copied)' : ''}${workedOffDay ? ' — earns a comp-off' : ''}`
+                    : offDay
+                      ? 'Weekly off'
+                      : canEdit
+                        ? 'Unassigned'
+                        : 'No shift'
+                }
               >
                 {shift ? shift.code : ''}
               </button>
@@ -80,7 +95,7 @@ export default function RosterTable({
       ),
     ]
     return cols
-  }, [days, entriesMap, shiftTypesByCode, holidaySet, year, month, onCellClick, canEdit])
+  }, [days, entriesMap, shiftTypesByCode, holidaySet, offDays, year, month, onCellClick, canEdit])
 
   const table = useReactTable({
     data: employees,

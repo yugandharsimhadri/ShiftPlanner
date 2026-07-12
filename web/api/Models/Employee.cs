@@ -23,7 +23,6 @@ public class Employee
     public string Role { get; set; } = string.Empty;
     public EmploymentType EmploymentType { get; set; }
     public DateOnly JoinDate { get; set; }
-    public DayOfWeek? WeeklyOff { get; set; }
     public EmployeeStatus Status { get; set; } = EmployeeStatus.Active;
     public string? Notes { get; set; }
 }

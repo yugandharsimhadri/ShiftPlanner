@@ -1,0 +1,30 @@
+.reports-page {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reports-toolbar {
+  display: flex;
+  gap: 20px;
+  padding: 18px 20px;
+  margin: 18px 0 22px;
+}
+
+.reports-toolbar .field {
+  margin-bottom: 0;
+}
+
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-th:hover {
+  color: var(--accent);
+}
+
+.sort-arrow {
+  color: var(--accent);
+  font-size: 10px;
+}

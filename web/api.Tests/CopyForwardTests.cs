@@ -34,7 +34,7 @@ public class CopyForwardTests : IClassFixture<TestWebApplicationFactory>
 
         var shiftTypeRequest = new HttpRequestMessage(HttpMethod.Post, "/api/shift-types")
         {
-            Content = JsonContent.Create(new ShiftTypeDto(null, "M", "Morning", null, null, "#A8701F", false), options: JsonOptions)
+            Content = JsonContent.Create(new ShiftTypeDto(null, "M", "Morning", null, null, "#A8701F", false, true), options: JsonOptions)
         }.Authorized(token, team.Id);
         await client.SendAsync(shiftTypeRequest);
 
@@ -71,7 +71,7 @@ public class CopyForwardTests : IClassFixture<TestWebApplicationFactory>
 
         var shiftTypeRequest = new HttpRequestMessage(HttpMethod.Post, "/api/shift-types")
         {
-            Content = JsonContent.Create(new ShiftTypeDto(null, "M", "Morning", null, null, "#A8701F", false), options: JsonOptions)
+            Content = JsonContent.Create(new ShiftTypeDto(null, "M", "Morning", null, null, "#A8701F", false, true), options: JsonOptions)
         }.Authorized(token, team.Id);
         await client.SendAsync(shiftTypeRequest);
 
@@ -81,7 +81,7 @@ public class CopyForwardTests : IClassFixture<TestWebApplicationFactory>
 
         // Deactivate.
         var deactivateDto = new EmployeeDto("EMP-001", "Alice", "555-0100", null, track.Id, null, "Clerk",
-            ShiftPlanner.Api.Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today), null,
+            ShiftPlanner.Api.Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today),
             ShiftPlanner.Api.Models.EmployeeStatus.Inactive, null);
         var deactivateRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/employees/{employee.Id}")
         {

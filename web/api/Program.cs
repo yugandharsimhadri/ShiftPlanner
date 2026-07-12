@@ -44,7 +44,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy(DevCorsPolicy, policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -89,6 +89,8 @@ app.MapHolidaysEndpoints();
 app.MapRosterEndpoints();
 app.MapExportEndpoints();
 app.MapImportEndpoints();
+app.MapCompOffsEndpoints();
+app.MapReportsEndpoints();
 
 app.MapFallbackToFile("index.html");
 

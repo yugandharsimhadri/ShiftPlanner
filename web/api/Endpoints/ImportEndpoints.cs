@@ -10,9 +10,9 @@ namespace ShiftPlanner.Api.Endpoints;
 public static class ImportEndpoints
 {
     // Expected columns (header row required):
-    // Name, Phone, Email, Track, Subtrack, Role, EmploymentType, JoinDate, WeeklyOff, Status, Notes
+    // Name, Phone, Email, Track, Subtrack, Role, EmploymentType, JoinDate, Status, Notes
     private static readonly string[] ExpectedHeaders =
-        { "Name", "Phone", "Email", "Track", "Subtrack", "Role", "EmploymentType", "JoinDate", "WeeklyOff", "Status", "Notes" };
+        { "Name", "Phone", "Email", "Track", "Subtrack", "Role", "EmploymentType", "JoinDate", "Status", "Notes" };
 
     public static void MapImportEndpoints(this WebApplication app)
     {
@@ -98,18 +98,6 @@ public static class ImportEndpoints
                     continue;
                 }
 
-                DayOfWeek? weeklyOff = null;
-                var weeklyOffRaw = row.GetValueOrDefault("WeeklyOff", "").Trim();
-                if (!string.IsNullOrWhiteSpace(weeklyOffRaw))
-                {
-                    if (!Enum.TryParse<DayOfWeek>(weeklyOffRaw, true, out var parsedDay))
-                    {
-                        errors.Add(new ImportRowError(rowNum, $"Invalid WeeklyOff '{weeklyOffRaw}'."));
-                        continue;
-                    }
-                    weeklyOff = parsedDay;
-                }
-
                 var joinDate = DateOnly.FromDateTime(DateTime.Today);
                 var joinDateRaw = row.GetValueOrDefault("JoinDate", "").Trim();
                 if (!string.IsNullOrWhiteSpace(joinDateRaw))
@@ -132,7 +120,6 @@ public static class ImportEndpoints
                     Role = row.GetValueOrDefault("Role", "").Trim(),
                     EmploymentType = employmentType,
                     JoinDate = joinDate,
-                    WeeklyOff = weeklyOff,
                     Status = status,
                     Notes = string.IsNullOrWhiteSpace(row.GetValueOrDefault("Notes", "")) ? null : row["Notes"].Trim()
                 });

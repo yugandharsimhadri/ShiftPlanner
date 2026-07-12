@@ -31,3 +31,11 @@ public enum MembershipStatus
     Invited,
     Active
 }
+
+public enum CompOffStatus
+{
+    // Earned (worked a default-off day) but not yet taken against a make-up day.
+    Pending,
+    // Consumed against a specific make-up day off.
+    Used
+}

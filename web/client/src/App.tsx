@@ -8,6 +8,7 @@ import Roster from './pages/Roster'
 import Employees from './pages/Employees'
 import Members from './pages/Members'
 import Settings from './pages/Settings'
+import Reports from './pages/Reports'
 
 export default function App() {
   return (
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/employees" element={<Employees />} />
         <Route path="/members" element={<Members />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/reports" element={<Reports />} />
       </Route>
     </Routes>
   )

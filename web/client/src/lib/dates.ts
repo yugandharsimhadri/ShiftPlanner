@@ -19,6 +19,15 @@ export function isWeekend(year: number, month: number, day: number): boolean {
   return dow === 0 || dow === 6
 }
 
+const DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+// Team-configurable version of isWeekend — a day counts as "off" if its weekday name
+// is in the team's DefaultOffDays (defaults to Saturday/Sunday, but a team can change it).
+export function isTeamOffDay(year: number, month: number, day: number, offDays: readonly string[]): boolean {
+  const dow = new Date(year, month - 1, day).getDay()
+  return offDays.includes(DOW_NAMES[dow])
+}
+
 export function weekdayLetter(year: number, month: number, day: number): string {
   return 'SMTWTFS'[new Date(year, month - 1, day).getDay()]
 }

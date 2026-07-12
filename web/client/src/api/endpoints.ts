@@ -1,17 +1,23 @@
 import { api } from './client'
 import type {
+  CompOffEntry,
+  CompOffStatus,
   CopyForwardResult,
   Employee,
   EmployeeInput,
   Holiday,
   ImportResult,
+  Me,
   Membership,
   RosterResponse,
   ShiftType,
   Subtrack,
   TeamRole,
+  TeamSettings,
   TeamSummary,
   Track,
+  UpdateTeamSettingsInput,
+  UtilizationRow,
 } from '../types'
 
 // --- Teams -------------------------------------------------------------------
@@ -48,6 +54,57 @@ export async function linkMemberEmployee(membershipId: number, employeeId: strin
 
 export async function removeMember(membershipId: number): Promise<void> {
   await api.delete(`/api/teams/current/members/${membershipId}`)
+}
+
+export async function getMe(): Promise<Me> {
+  const res = await api.get('/api/teams/current/members/me')
+  return res.data
+}
+
+export async function transferLead(membershipId: number): Promise<Membership> {
+  const res = await api.patch(`/api/teams/current/members/${membershipId}/lead`)
+  return res.data
+}
+
+export async function setCoLead(membershipId: number, isCoLead: boolean): Promise<Membership> {
+  const res = await api.patch(`/api/teams/current/members/${membershipId}/co-lead`, { isCoLead })
+  return res.data
+}
+
+// --- Team settings -----------------------------------------------------------
+
+export async function getTeamSettings(): Promise<TeamSettings> {
+  const res = await api.get('/api/teams/current/settings')
+  return res.data
+}
+
+export async function updateTeamSettings(payload: UpdateTeamSettingsInput): Promise<TeamSettings> {
+  const res = await api.put('/api/teams/current/settings', payload)
+  return res.data
+}
+
+// --- Comp-offs ---------------------------------------------------------------
+
+export async function getCompOffs(status?: CompOffStatus, employeeId?: string): Promise<CompOffEntry[]> {
+  const res = await api.get('/api/compoffs', { params: { status, employeeId } })
+  return res.data
+}
+
+export async function useCompOff(id: number, usedDate: string): Promise<CompOffEntry> {
+  const res = await api.post(`/api/compoffs/${id}/use`, { usedDate })
+  return res.data
+}
+
+export async function unuseCompOff(id: number): Promise<CompOffEntry> {
+  const res = await api.post(`/api/compoffs/${id}/unuse`)
+  return res.data
+}
+
+// --- Reports -------------------------------------------------------------------
+
+export async function getUtilizationReport(start: string, end: string): Promise<UtilizationRow[]> {
+  const res = await api.get('/api/reports/utilization', { params: { start, end } })
+  return res.data
 }
 
 // --- Roster ---------------------------------------------------------------

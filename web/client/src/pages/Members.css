@@ -39,3 +39,31 @@
   color: var(--accent);
   font-weight: 600;
 }
+
+.role-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge-lead,
+.badge-colead {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.badge-lead {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badge-colead {
+  background: var(--surface-soft);
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+}

@@ -57,7 +57,6 @@ public static class EmployeesEndpoints
                 Role = dto.Role,
                 EmploymentType = dto.EmploymentType,
                 JoinDate = dto.JoinDate,
-                WeeklyOff = dto.WeeklyOff,
                 Status = dto.Status,
                 Notes = dto.Notes
             };
@@ -87,7 +86,6 @@ public static class EmployeesEndpoints
             employee.Role = dto.Role;
             employee.EmploymentType = dto.EmploymentType;
             employee.JoinDate = dto.JoinDate;
-            employee.WeeklyOff = dto.WeeklyOff;
             employee.Status = dto.Status;
             employee.Notes = dto.Notes;
 

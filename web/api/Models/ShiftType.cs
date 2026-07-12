@@ -14,4 +14,9 @@ public class ShiftType
     public TimeOnly? End { get; set; }
     public string Color { get; set; } = "#4453AD";
     public bool IsOvernight { get; set; }
+
+    // True for actual worked shifts (Morning/Evening/Night); false for absence codes
+    // like "Off" or "Leave". Drives comp-off auto-earn: assigning a work shift on a
+    // default-off day earns a comp-off, assigning a non-work code never does.
+    public bool IsWorkShift { get; set; } = true;
 }

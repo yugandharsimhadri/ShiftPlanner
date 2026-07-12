@@ -12,7 +12,6 @@ public record EmployeeDto(
     string Role,
     EmploymentType EmploymentType,
     DateOnly JoinDate,
-    DayOfWeek? WeeklyOff,
     EmployeeStatus Status,
     string? Notes
 );
@@ -21,7 +20,7 @@ public record TrackDto(int? Id, string Name, string? LeadName, string Color);
 
 public record SubtrackDto(int? Id, int TrackId, string Name);
 
-public record ShiftTypeDto(int? Id, string Code, string Name, TimeOnly? Start, TimeOnly? End, string Color, bool IsOvernight);
+public record ShiftTypeDto(int? Id, string Code, string Name, TimeOnly? Start, TimeOnly? End, string Color, bool IsOvernight, bool IsWorkShift);
 
 public record HolidayDto(int? Id, DateOnly Date, string Name);
 
@@ -60,9 +59,61 @@ public record MembershipDto(
     TeamRole Role,
     MembershipStatus Status,
     Guid? EmployeeId,
-    DateTimeOffset CreatedAt
+    DateTimeOffset CreatedAt,
+    bool IsTeamLead,
+    bool IsCoLead
 );
 
 public record LinkEmployeeDto(Guid? EmployeeId);
 
-public record MeDto(string Email, TeamRole Role, Guid? EmployeeId, string? EmployeeCode);
+public record MeDto(string Email, TeamRole Role, Guid? EmployeeId, string? EmployeeCode, bool IsTeamLead, bool IsCoLead);
+
+public record TeamSettingsDto(
+    string Name,
+    string? OrgName,
+    int? TeamStrength,
+    string? ShiftsCovered,
+    List<DayOfWeek> DefaultOffDays,
+    bool CompOffsEnabled,
+    int ActiveEmployeeCount,
+    string? LeadEmail,
+    string? CoLeadEmail
+);
+
+public record UpdateTeamSettingsDto(
+    string? OrgName,
+    int? TeamStrength,
+    string? ShiftsCovered,
+    List<DayOfWeek> DefaultOffDays,
+    bool CompOffsEnabled
+);
+
+public record SetCoLeadDto(bool IsCoLead);
+
+// --- Comp-offs ---------------------------------------------------------------
+
+public record CompOffEntryDto(
+    int Id,
+    Guid EmployeeId,
+    string EmployeeCode,
+    string EmployeeName,
+    DateOnly EarnedDate,
+    CompOffStatus Status,
+    DateOnly? UsedDate
+);
+
+public record UseCompOffDto(DateOnly UsedDate);
+
+// --- Reports -------------------------------------------------------------------
+
+public record UtilizationRowDto(
+    Guid EmployeeId,
+    string EmployeeCode,
+    string EmployeeName,
+    string? TrackName,
+    int TotalShiftsWorked,
+    int WeekendShiftsWorked,
+    int CompOffsEarned,
+    int CompOffsUsed,
+    int CompOffsPending
+);

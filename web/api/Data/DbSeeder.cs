@@ -38,7 +38,15 @@ public static class DbSeeder
 
         if (db.Teams.Any()) return;
 
-        var team = new Team { Name = DemoTeamName, CreatedByUserId = admin.Id };
+        var team = new Team
+        {
+            Name = DemoTeamName,
+            CreatedByUserId = admin.Id,
+            OrgName = "Demo Organization",
+            TeamStrength = 12,
+            ShiftsCovered = "24x7",
+            CompOffsEnabled = true,
+        };
         db.Teams.Add(team);
         db.SaveChanges();
 
@@ -48,7 +56,8 @@ public static class DbSeeder
             UserId = admin.Id,
             Email = AdminEmail,
             Role = TeamRole.Admin,
-            Status = MembershipStatus.Active
+            Status = MembershipStatus.Active,
+            IsTeamLead = true,
         });
 
         var frontDesk = new Track { TeamId = team.Id, Name = "Front Desk", LeadName = "Priya Nair", Color = "#4453AD" };
@@ -64,11 +73,12 @@ public static class DbSeeder
         );
 
         db.ShiftTypes.AddRange(
-            new ShiftType { TeamId = team.Id, Code = "M", Name = "Morning", Start = new TimeOnly(6, 0), End = new TimeOnly(14, 0), Color = "#A8701F", IsOvernight = false },
-            new ShiftType { TeamId = team.Id, Code = "E", Name = "Evening", Start = new TimeOnly(14, 0), End = new TimeOnly(22, 0), Color = "#4453AD", IsOvernight = false },
-            new ShiftType { TeamId = team.Id, Code = "N", Name = "Night", Start = new TimeOnly(22, 0), End = new TimeOnly(6, 0), Color = "#22314F", IsOvernight = true },
-            new ShiftType { TeamId = team.Id, Code = "OFF", Name = "Off", Start = null, End = null, Color = "#6E7D78", IsOvernight = false },
-            new ShiftType { TeamId = team.Id, Code = "LV", Name = "Leave", Start = null, End = null, Color = "#A5392B", IsOvernight = false }
+            new ShiftType { TeamId = team.Id, Code = "M", Name = "Morning", Start = new TimeOnly(6, 0), End = new TimeOnly(14, 0), Color = "#A8701F", IsOvernight = false, IsWorkShift = true },
+            new ShiftType { TeamId = team.Id, Code = "E", Name = "Evening", Start = new TimeOnly(14, 0), End = new TimeOnly(22, 0), Color = "#4453AD", IsOvernight = false, IsWorkShift = true },
+            new ShiftType { TeamId = team.Id, Code = "N", Name = "Night", Start = new TimeOnly(22, 0), End = new TimeOnly(6, 0), Color = "#22314F", IsOvernight = true, IsWorkShift = true },
+            new ShiftType { TeamId = team.Id, Code = "OFF", Name = "Off", Start = null, End = null, Color = "#6E7D78", IsOvernight = false, IsWorkShift = false },
+            new ShiftType { TeamId = team.Id, Code = "LV", Name = "Leave", Start = null, End = null, Color = "#A5392B", IsOvernight = false, IsWorkShift = false },
+            new ShiftType { TeamId = team.Id, Code = "CO", Name = "Comp Off", Start = null, End = null, Color = "#2F7D6B", IsOvernight = false, IsWorkShift = false }
         );
 
         var currentYear = DateTime.Now.Year;

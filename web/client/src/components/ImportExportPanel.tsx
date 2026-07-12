@@ -60,7 +60,7 @@ export default function ImportExportPanel({ year, month, canImport, onClose }: P
               Import employees (.csv or .xlsx)
             </h3>
             <p style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 0 }}>
-              Columns: Name, Phone, Email, Track, Subtrack, Role, EmploymentType, JoinDate, WeeklyOff, Status, Notes
+              Columns: Name, Phone, Email, Track, Subtrack, Role, EmploymentType, JoinDate, Status, Notes
             </p>
             <input
               ref={fileInputRef}

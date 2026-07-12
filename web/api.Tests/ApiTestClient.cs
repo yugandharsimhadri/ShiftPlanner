@@ -91,7 +91,7 @@ public static class ApiTestClient
     public static async Task<HttpResponseMessage> CreateEmployeeAsync(this HttpClient client, string token, int teamId, string code, string name, int trackId)
     {
         var dto = new EmployeeDto(code, name, "555-0100", null, trackId, null, "Clerk",
-            Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today), null, Models.EmployeeStatus.Active, null);
+            Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today), Models.EmployeeStatus.Active, null);
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/employees") { Content = JsonContent.Create(dto, options: JsonOptions) }
             .Authorized(token, teamId);
         return await client.SendAsync(request);

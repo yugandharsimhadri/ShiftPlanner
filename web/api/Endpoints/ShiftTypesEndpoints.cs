@@ -40,7 +40,8 @@ public static class ShiftTypesEndpoints
                 Start = dto.Start,
                 End = dto.End,
                 Color = dto.Color,
-                IsOvernight = dto.IsOvernight
+                IsOvernight = dto.IsOvernight,
+                IsWorkShift = dto.IsWorkShift
             };
             db.ShiftTypes.Add(st);
             await db.SaveChangesAsync();
@@ -63,6 +64,7 @@ public static class ShiftTypesEndpoints
             st.End = dto.End;
             st.Color = dto.Color;
             st.IsOvernight = dto.IsOvernight;
+            st.IsWorkShift = dto.IsWorkShift;
             await db.SaveChangesAsync();
             return Results.Ok(st);
         }).RequireTeamEditor();

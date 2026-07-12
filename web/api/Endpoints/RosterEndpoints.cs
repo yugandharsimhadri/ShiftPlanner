@@ -33,6 +33,7 @@ public static class RosterEndpoints
             var tracks = await db.Tracks.Where(t => t.TeamId == teamId).Include(t => t.Subtracks).OrderBy(t => t.Name).ToListAsync();
             var shiftTypes = await db.ShiftTypes.Where(s => s.TeamId == teamId).OrderBy(s => s.Code).ToListAsync();
             var holidays = await db.Holidays.Where(h => h.TeamId == teamId && h.Date >= start && h.Date <= end).ToListAsync();
+            var team = await db.Teams.FirstAsync(t => t.Id == teamId);
 
             return Results.Ok(new
             {
@@ -42,7 +43,8 @@ public static class RosterEndpoints
                 Employees = employees,
                 Tracks = tracks,
                 ShiftTypes = shiftTypes,
-                Holidays = holidays
+                Holidays = holidays,
+                DefaultOffDays = team.DefaultOffDays,
             });
         }).RequireTeamMember();
 
@@ -53,7 +55,10 @@ public static class RosterEndpoints
             var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == dto.EmployeeId && e.TeamId == teamId);
             if (employee is null) return Results.NotFound($"Employee '{dto.EmployeeId}' not found.");
 
-            if (dto.ShiftCode is not null && !await db.ShiftTypes.AnyAsync(s => s.TeamId == teamId && s.Code == dto.ShiftCode))
+            var shiftType = dto.ShiftCode is null
+                ? null
+                : await db.ShiftTypes.FirstOrDefaultAsync(s => s.TeamId == teamId && s.Code == dto.ShiftCode);
+            if (dto.ShiftCode is not null && shiftType is null)
                 return Results.BadRequest($"Shift type '{dto.ShiftCode}' not found.");
 
             var entry = await db.RosterEntries
@@ -79,6 +84,8 @@ public static class RosterEndpoints
                 entry.Note = dto.Note;
             }
 
+            await CompOffAutoEarn.SyncAsync(db, teamId, dto.EmployeeId, dto.Date, shiftType?.IsWorkShift == true);
+
             await db.SaveChangesAsync();
             return Results.Ok(entry);
         }).RequireTeamEditor();
@@ -102,6 +109,11 @@ public static class RosterEndpoints
                 .ToListAsync())
                 .Select(h => h.Date)
                 .ToHashSet();
+            var workShiftCodes = await db.ShiftTypes
+                .Where(s => s.TeamId == teamId && s.IsWorkShift)
+                .Select(s => s.Code)
+                .ToListAsync();
+            var workShiftCodeSet = new HashSet<string>(workShiftCodes, StringComparer.OrdinalIgnoreCase);
 
             var flagged = new List<CopyForwardFlag>();
             var copiedCount = 0;
@@ -147,6 +159,9 @@ public static class RosterEndpoints
                     existing.Source = RosterEntrySource.Copied;
                     existing.Note = src.Note;
                 }
+
+                var isWorkShift = src.ShiftCode is not null && workShiftCodeSet.Contains(src.ShiftCode);
+                await CompOffAutoEarn.SyncAsync(db, teamId, src.EmployeeId, targetDate.Value, isWorkShift);
 
                 copiedCount++;
 

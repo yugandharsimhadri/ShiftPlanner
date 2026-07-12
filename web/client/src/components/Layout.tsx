@@ -35,6 +35,9 @@ export default function Layout() {
           <NavLink to="/settings" className={({ isActive }) => (isActive ? 'active' : '')}>
             Settings
           </NavLink>
+          <NavLink to="/reports" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Reports
+          </NavLink>
         </nav>
         <TeamSwitcher />
         <button className="btn-ghost" onClick={logout}>

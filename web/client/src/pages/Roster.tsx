@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getRoster, upsertRosterEntry } from '../api/endpoints'
+import { getCompOffs, getRoster, upsertRosterEntry, useCompOff } from '../api/endpoints'
 import { addMonths, daysInMonth, monthLabel } from '../lib/dates'
 import RosterTable from '../components/RosterTable'
 import ShiftPopup from '../components/ShiftPopup'
@@ -33,6 +33,21 @@ export default function Roster() {
     mutationFn: upsertRosterEntry,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: rosterKey })
+      queryClient.invalidateQueries({ queryKey: ['compoffs'] })
+    },
+  })
+
+  const { data: pendingCompOffs } = useQuery({
+    queryKey: ['compoffs', 'pending', popup?.employeeId],
+    queryFn: () => getCompOffs('Pending', popup!.employeeId),
+    enabled: !!popup && canEdit,
+  })
+
+  const useCompOffMutation = useMutation({
+    mutationFn: (id: number) => useCompOff(id, popup!.date),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['compoffs'] })
+      setPopup(null)
     },
   })
 
@@ -131,6 +146,7 @@ export default function Roster() {
                   entriesMap={entriesMap}
                   shiftTypesByCode={shiftTypesByCode}
                   holidaySet={holidaySet}
+                  offDays={data.defaultOffDays}
                   onCellClick={handleCellClick}
                   canEdit={canEdit}
                 />
@@ -148,6 +164,8 @@ export default function Roster() {
           currentCode={entriesMap.get(`${popup.employeeId}|${popup.date}`)?.shiftCode ?? null}
           onSelect={handleSelectShift}
           onClose={() => setPopup(null)}
+          pendingCompOffs={pendingCompOffs ?? []}
+          onUseCompOff={(id) => useCompOffMutation.mutate(id)}
         />
       )}
 

@@ -3,6 +3,19 @@ export type EmployeeStatus = 'Active' | 'Inactive'
 export type RosterEntrySource = 'Manual' | 'Copied'
 export type TeamRole = 'Viewer' | 'Editor' | 'Admin'
 export type MembershipStatus = 'Invited' | 'Active'
+export type CompOffStatus = 'Pending' | 'Used'
+export type DayOfWeekName =
+  | 'Sunday'
+  | 'Monday'
+  | 'Tuesday'
+  | 'Wednesday'
+  | 'Thursday'
+  | 'Friday'
+  | 'Saturday'
+
+export const ALL_DAYS: DayOfWeekName[] = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+]
 
 export interface Track {
   id: number
@@ -26,6 +39,7 @@ export interface ShiftType {
   end: string | null
   color: string
   isOvernight: boolean
+  isWorkShift: boolean
 }
 
 export interface Holiday {
@@ -47,7 +61,6 @@ export interface Employee {
   role: string
   employmentType: EmploymentType
   joinDate: string
-  weeklyOff: string | null
   status: EmployeeStatus
   notes: string | null
 }
@@ -62,7 +75,6 @@ export interface EmployeeInput {
   role: string
   employmentType: EmploymentType
   joinDate: string
-  weeklyOff?: string | null
   status: EmployeeStatus
   notes?: string | null
 }
@@ -84,6 +96,7 @@ export interface RosterResponse {
   tracks: Track[]
   shiftTypes: ShiftType[]
   holidays: Holiday[]
+  defaultOffDays: DayOfWeekName[]
 }
 
 export interface CopyForwardFlag {
@@ -123,4 +136,61 @@ export interface Membership {
   status: MembershipStatus
   employeeId: string | null
   createdAt: string
+  isTeamLead: boolean
+  isCoLead: boolean
+}
+
+export interface Me {
+  email: string
+  role: TeamRole
+  employeeId: string | null
+  employeeCode: string | null
+  isTeamLead: boolean
+  isCoLead: boolean
+}
+
+export interface TeamSettings {
+  name: string
+  orgName: string | null
+  teamStrength: number | null
+  shiftsCovered: string | null
+  defaultOffDays: DayOfWeekName[]
+  compOffsEnabled: boolean
+  activeEmployeeCount: number
+  leadEmail: string | null
+  coLeadEmail: string | null
+}
+
+export interface UpdateTeamSettingsInput {
+  orgName?: string | null
+  teamStrength?: number | null
+  shiftsCovered?: string | null
+  defaultOffDays: DayOfWeekName[]
+  compOffsEnabled: boolean
+}
+
+// --- Comp-offs ---------------------------------------------------------------
+
+export interface CompOffEntry {
+  id: number
+  employeeId: string
+  employeeCode: string
+  employeeName: string
+  earnedDate: string
+  status: CompOffStatus
+  usedDate: string | null
+}
+
+// --- Reports -------------------------------------------------------------------
+
+export interface UtilizationRow {
+  employeeId: string
+  employeeCode: string
+  employeeName: string
+  trackName: string | null
+  totalShiftsWorked: number
+  weekendShiftsWorked: number
+  compOffsEarned: number
+  compOffsUsed: number
+  compOffsPending: number
 }

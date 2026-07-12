@@ -17,6 +17,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
     public DbSet<ShiftType> ShiftTypes => Set<ShiftType>();
     public DbSet<RosterEntry> RosterEntries => Set<RosterEntry>();
     public DbSet<Holiday> Holidays => Set<Holiday>();
+    public DbSet<CompOffEntry> CompOffEntries => Set<CompOffEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -76,5 +77,11 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
         builder.Entity<RosterEntry>()
             .HasIndex(r => new { r.EmployeeId, r.Date })
             .IsUnique();
+
+        builder.Entity<CompOffEntry>()
+            .HasOne(c => c.Employee)
+            .WithMany()
+            .HasForeignKey(c => c.EmployeeId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

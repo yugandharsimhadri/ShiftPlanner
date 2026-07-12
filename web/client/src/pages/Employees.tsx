@@ -54,7 +54,6 @@ export default function Employees() {
                 <th>Track</th>
                 <th>Role</th>
                 <th>Type</th>
-                <th>Weekly off</th>
                 <th>Status</th>
                 {canEdit && <th></th>}
               </tr>
@@ -76,7 +75,6 @@ export default function Employees() {
                   </td>
                   <td>{emp.role}</td>
                   <td>{emp.employmentType === 'FullTime' ? 'Full-time' : 'Part-time'}</td>
-                  <td>{emp.weeklyOff ?? '—'}</td>
                   <td>
                     <span className={`badge${emp.status === 'Active' ? ' badge-active' : ''}`}>{emp.status}</span>
                   </td>
@@ -94,7 +92,7 @@ export default function Employees() {
               ))}
               {employees.length === 0 && (
                 <tr>
-                  <td colSpan={canEdit ? 9 : 8} className="empty-state">
+                  <td colSpan={canEdit ? 8 : 7} className="empty-state">
                     No employees yet.
                   </td>
                 </tr>

@@ -65,12 +65,39 @@
   letter-spacing: 0.3px;
 }
 
-.day-head.weekend .mono {
-  color: var(--ink-soft);
+.day-head.off-day {
+  background: color-mix(in srgb, var(--shift-leave) 12%, transparent);
+  border-radius: 6px 6px 0 0;
+}
+
+.day-head.off-day .mono,
+.day-head.off-day .day-head-dow {
+  color: var(--shift-leave);
+  font-weight: 700;
 }
 
 .day-head.holiday .mono {
   color: var(--shift-leave);
+}
+
+.shift-cell.off-day {
+  background: color-mix(in srgb, var(--shift-leave) 8%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--shift-leave) 24%, var(--line));
+}
+
+.shift-cell.comp-off-earned::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.shift-cell {
+  position: relative;
 }
 
 .shift-cell {

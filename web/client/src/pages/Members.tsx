@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addMember, getEmployees, getMembers, linkMemberEmployee, removeMember, updateMemberRole } from '../api/endpoints'
+import {
+  addMember,
+  getEmployees,
+  getMe,
+  getMembers,
+  linkMemberEmployee,
+  removeMember,
+  setCoLead,
+  transferLead,
+  updateMemberRole,
+} from '../api/endpoints'
 import { useTeam } from '../team/TeamContext'
 import type { TeamRole } from '../types'
 import './Members.css'
@@ -24,11 +34,21 @@ export default function Members() {
     enabled: !!currentTeam,
   })
 
+  const { data: me } = useQuery({
+    queryKey: ['me', currentTeam?.id],
+    queryFn: getMe,
+    enabled: !!currentTeam,
+  })
+  const isCurrentUserLead = me?.isTeamLead === true
+
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<TeamRole>('Editor')
   const [error, setError] = useState<string | null>(null)
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['members', currentTeam?.id] })
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['members', currentTeam?.id] })
+    queryClient.invalidateQueries({ queryKey: ['me', currentTeam?.id] })
+  }
 
   const addMutation = useMutation({
     mutationFn: addMember,
@@ -45,6 +65,8 @@ export default function Members() {
     onSuccess: invalidate,
   })
   const removeMutation = useMutation({ mutationFn: removeMember, onSuccess: invalidate })
+  const transferLeadMutation = useMutation({ mutationFn: transferLead, onSuccess: invalidate })
+  const coLeadMutation = useMutation({ mutationFn: (p: { id: number; isCoLead: boolean }) => setCoLead(p.id, p.isCoLead), onSuccess: invalidate })
 
   return (
     <div className="members-page">
@@ -109,21 +131,27 @@ export default function Members() {
                 <tr key={m.id}>
                   <td>{m.email}</td>
                   <td>
-                    {isAdmin ? (
-                      <select
-                        value={m.role}
-                        onChange={(e) => roleMutation.mutate({ id: m.id, role: e.target.value as TeamRole })}
-                        className="role-select"
-                      >
-                        {ROLES.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className={`badge-role${m.role === 'Admin' ? ' role-admin' : ''}`}>{m.role}</span>
-                    )}
+                    <div className="role-cell">
+                      {isAdmin ? (
+                        <select
+                          value={m.role}
+                          onChange={(e) => roleMutation.mutate({ id: m.id, role: e.target.value as TeamRole })}
+                          className="role-select"
+                          disabled={m.isTeamLead}
+                          title={m.isTeamLead ? 'Transfer the lead to someone else before changing this role.' : undefined}
+                        >
+                          {ROLES.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className={`badge-role${m.role === 'Admin' ? ' role-admin' : ''}`}>{m.role}</span>
+                      )}
+                      {m.isTeamLead && <span className="badge-lead">Lead</span>}
+                      {m.isCoLead && <span className="badge-colead">Co-Lead</span>}
+                    </div>
                   </td>
                   <td>
                     <span className={`status-pill${m.status === 'Active' ? ' status-active' : ''}`}>
@@ -152,9 +180,24 @@ export default function Members() {
                   </td>
                   {isAdmin && (
                     <td className="row-actions">
-                      <button className="btn-danger" onClick={() => removeMutation.mutate(m.id)}>
-                        Remove
-                      </button>
+                      {isCurrentUserLead && !m.isTeamLead && m.status === 'Active' && (
+                        <button className="btn-ghost" onClick={() => transferLeadMutation.mutate(m.id)}>
+                          Make lead
+                        </button>
+                      )}
+                      {isCurrentUserLead && !m.isTeamLead && m.status === 'Active' && (
+                        <button
+                          className="btn-ghost"
+                          onClick={() => coLeadMutation.mutate({ id: m.id, isCoLead: !m.isCoLead })}
+                        >
+                          {m.isCoLead ? 'Remove co-lead' : 'Make co-lead'}
+                        </button>
+                      )}
+                      {!m.isTeamLead && (
+                        <button className="btn-danger" onClick={() => removeMutation.mutate(m.id)}>
+                          Remove
+                        </button>
+                      )}
                     </td>
                   )}
                 </tr>

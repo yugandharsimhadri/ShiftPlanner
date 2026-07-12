@@ -9,8 +9,6 @@ interface Props {
   onClose: () => void
 }
 
-const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
 export default function EmployeeFormModal({ employee, tracks, onClose }: Props) {
   const queryClient = useQueryClient()
   const isEdit = !!employee
@@ -35,7 +33,6 @@ export default function EmployeeFormModal({ employee, tracks, onClose }: Props) 
   const [role, setRole] = useState(employee?.role ?? '')
   const [employmentType, setEmploymentType] = useState<EmploymentType>(employee?.employmentType ?? 'FullTime')
   const [joinDate, setJoinDate] = useState(employee?.joinDate ?? new Date().toISOString().slice(0, 10))
-  const [weeklyOff, setWeeklyOff] = useState(employee?.weeklyOff ?? '')
   const [status, setStatus] = useState<EmployeeStatus>(employee?.status ?? 'Active')
   const [notes, setNotes] = useState(employee?.notes ?? '')
 
@@ -62,7 +59,6 @@ export default function EmployeeFormModal({ employee, tracks, onClose }: Props) 
       role,
       employmentType,
       joinDate,
-      weeklyOff: weeklyOff || null,
       status,
       notes: notes || null,
     })
@@ -151,17 +147,6 @@ export default function EmployeeFormModal({ employee, tracks, onClose }: Props) 
           <div className="field">
             <label htmlFor="emp-join">Join date</label>
             <input id="emp-join" type="date" value={joinDate} onChange={(e) => setJoinDate(e.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="emp-off">Weekly off</label>
-            <select id="emp-off" value={weeklyOff} onChange={(e) => setWeeklyOff(e.target.value)}>
-              <option value="">None</option>
-              {WEEKDAYS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
           </div>
         </div>
 

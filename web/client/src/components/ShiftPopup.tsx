@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import type { ShiftType } from '../types'
+import type { CompOffEntry, ShiftType } from '../types'
 import './ShiftPopup.css'
 
 interface Props {
@@ -9,9 +9,20 @@ interface Props {
   currentCode: string | null
   onSelect: (code: string | null) => void
   onClose: () => void
+  pendingCompOffs?: CompOffEntry[]
+  onUseCompOff?: (id: number) => void
 }
 
-export default function ShiftPopup({ x, y, shiftTypes, currentCode, onSelect, onClose }: Props) {
+export default function ShiftPopup({
+  x,
+  y,
+  shiftTypes,
+  currentCode,
+  onSelect,
+  onClose,
+  pendingCompOffs = [],
+  onUseCompOff,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -55,6 +66,17 @@ export default function ShiftPopup({ x, y, shiftTypes, currentCode, onSelect, on
         <span className="shift-popup-code">—</span>
         <span className="shift-popup-name">Clear</span>
       </button>
+
+      {pendingCompOffs.length > 0 && onUseCompOff && (
+        <div className="shift-popup-compoffs">
+          <div className="shift-popup-compoffs-title">Pending comp-offs owed</div>
+          {pendingCompOffs.map((c) => (
+            <button key={c.id} className="shift-popup-compoff-row" onClick={() => onUseCompOff(c.id)}>
+              Earned {c.earnedDate} — settle here
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

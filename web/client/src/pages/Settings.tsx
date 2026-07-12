@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createShiftType,
@@ -8,20 +8,140 @@ import {
   deleteSubtrack,
   deleteTrack,
   getShiftTypes,
+  getTeamSettings,
   getTracks,
   updateShiftType,
+  updateTeamSettings,
   updateTrack,
 } from '../api/endpoints'
 import { useTeam } from '../team/TeamContext'
-import type { ShiftType, Track } from '../types'
+import { ALL_DAYS, type DayOfWeekName, type ShiftType, type Track } from '../types'
 import './Settings.css'
 
 export default function Settings() {
   return (
     <div className="settings-page">
+      <TeamSettingsSection />
       <TracksSection />
       <ShiftTypesSection />
     </div>
+  )
+}
+
+function TeamSettingsSection() {
+  const { currentRole } = useTeam()
+  const isAdmin = currentRole === 'Admin'
+  const queryClient = useQueryClient()
+  const { data: settings } = useQuery({ queryKey: ['team-settings'], queryFn: getTeamSettings })
+
+  const [orgName, setOrgName] = useState('')
+  const [teamStrength, setTeamStrength] = useState('')
+  const [shiftsCovered, setShiftsCovered] = useState('')
+  const [offDays, setOffDays] = useState<DayOfWeekName[]>([])
+  const [compOffsEnabled, setCompOffsEnabled] = useState(false)
+
+  useEffect(() => {
+    if (!settings) return
+    setOrgName(settings.orgName ?? '')
+    setTeamStrength(settings.teamStrength?.toString() ?? '')
+    setShiftsCovered(settings.shiftsCovered ?? '')
+    setOffDays(settings.defaultOffDays)
+    setCompOffsEnabled(settings.compOffsEnabled)
+  }, [settings])
+
+  const saveMutation = useMutation({
+    mutationFn: updateTeamSettings,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['team-settings'] }),
+  })
+
+  const toggleDay = (day: DayOfWeekName) => {
+    if (!isAdmin) return
+    setOffDays((days) => (days.includes(day) ? days.filter((d) => d !== day) : [...days, day]))
+  }
+
+  const save = () =>
+    saveMutation.mutate({
+      orgName: orgName.trim() || null,
+      teamStrength: teamStrength.trim() ? Number(teamStrength) : null,
+      shiftsCovered: shiftsCovered.trim() || null,
+      defaultOffDays: offDays,
+      compOffsEnabled,
+    })
+
+  if (!settings) return null
+
+  return (
+    <section className="card settings-section">
+      <h2>Team settings — {settings.name}</h2>
+
+      <div className="settings-readout">
+        <span>Employees: <b>{settings.activeEmployeeCount}</b>{settings.teamStrength ? ` of ${settings.teamStrength} budgeted` : ''}</span>
+        <span>Lead: <b>{settings.leadEmail ?? '—'}</b></span>
+        <span>Co-lead: <b>{settings.coLeadEmail ?? 'none'}</b></span>
+      </div>
+
+      <div className="settings-field-grid">
+        <div className="settings-field">
+          <label htmlFor="org-name">Organization name</label>
+          <input id="org-name" value={orgName} onChange={(e) => setOrgName(e.target.value)} readOnly={!isAdmin} placeholder="e.g. Acme Retail" />
+        </div>
+        <div className="settings-field">
+          <label htmlFor="team-strength">Team strength (budgeted headcount)</label>
+          <input
+            id="team-strength"
+            type="number"
+            min={0}
+            value={teamStrength}
+            onChange={(e) => setTeamStrength(e.target.value)}
+            readOnly={!isAdmin}
+            placeholder="Informational only"
+          />
+        </div>
+        <div className="settings-field">
+          <label htmlFor="shifts-covered">Shifts covered</label>
+          <input
+            id="shifts-covered"
+            value={shiftsCovered}
+            onChange={(e) => setShiftsCovered(e.target.value)}
+            readOnly={!isAdmin}
+            placeholder="e.g. 24x7, Day shift only"
+          />
+        </div>
+      </div>
+
+      <div className="settings-field">
+        <label>Default weekly off days</label>
+        <div className="day-toggle-row">
+          {ALL_DAYS.map((day) => (
+            <button
+              key={day}
+              type="button"
+              className={`day-toggle${offDays.includes(day) ? ' on' : ''}`}
+              onClick={() => toggleDay(day)}
+              disabled={!isAdmin}
+            >
+              {day.slice(0, 3)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <label className="compoff-check">
+        <input
+          type="checkbox"
+          checked={compOffsEnabled}
+          onChange={(e) => setCompOffsEnabled(e.target.checked)}
+          disabled={!isAdmin}
+        />
+        Allow comp-offs — working a default off day earns a make-up day off
+      </label>
+
+      {isAdmin && (
+        <button className="btn" onClick={save} disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? 'Saving…' : 'Save team settings'}
+        </button>
+      )}
+    </section>
   )
 }
 
@@ -143,7 +263,7 @@ function ShiftTypesSection() {
   const canEdit = currentRole === 'Editor' || currentRole === 'Admin'
   const queryClient = useQueryClient()
   const { data: shiftTypes } = useQuery({ queryKey: ['shift-types'], queryFn: getShiftTypes })
-  const [form, setForm] = useState<Omit<ShiftType, 'id'>>({ code: '', name: '', start: null, end: null, color: '#4453AD', isOvernight: false })
+  const [form, setForm] = useState<Omit<ShiftType, 'id'>>({ code: '', name: '', start: null, end: null, color: '#4453AD', isOvernight: false, isWorkShift: true })
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['shift-types'] })
@@ -153,7 +273,7 @@ function ShiftTypesSection() {
   const createMutation = useMutation({
     mutationFn: createShiftType,
     onSuccess: () => {
-      setForm({ code: '', name: '', start: null, end: null, color: '#4453AD', isOvernight: false })
+      setForm({ code: '', name: '', start: null, end: null, color: '#4453AD', isOvernight: false, isWorkShift: true })
       invalidate()
     },
   })
@@ -171,6 +291,7 @@ function ShiftTypesSection() {
             <th>Start</th>
             <th>End</th>
             <th>Overnight</th>
+            <th>Work shift</th>
             <th>Color</th>
             {canEdit && <th></th>}
           </tr>
@@ -189,6 +310,14 @@ function ShiftTypesSection() {
               <td className="mono">{st.start?.slice(0, 5) ?? '—'}</td>
               <td className="mono">{st.end?.slice(0, 5) ?? '—'}</td>
               <td>{st.isOvernight ? 'Yes' : 'No'}</td>
+              <td>
+                <input
+                  type="checkbox"
+                  checked={st.isWorkShift}
+                  onChange={(e) => updateMutation.mutate({ ...st, isWorkShift: e.target.checked })}
+                  disabled={!canEdit}
+                />
+              </td>
               <td>
                 <input
                   type="color"
@@ -219,6 +348,10 @@ function ShiftTypesSection() {
           <label className="overnight-check">
             <input type="checkbox" checked={form.isOvernight} onChange={(e) => setForm({ ...form, isOvernight: e.target.checked })} />
             Overnight
+          </label>
+          <label className="overnight-check">
+            <input type="checkbox" checked={form.isWorkShift} onChange={(e) => setForm({ ...form, isWorkShift: e.target.checked })} />
+            Work shift
           </label>
           <input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="color-swatch" />
           <button className="btn" disabled={!form.code.trim() || !form.name.trim()} onClick={() => createMutation.mutate(form)}>
