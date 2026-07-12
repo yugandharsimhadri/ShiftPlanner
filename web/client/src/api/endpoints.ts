@@ -1,24 +1,37 @@
 import { api } from './client'
 import type {
+  AssignPersonToTeamInput,
   CompOffEntry,
   CompOffStatus,
   CopyForwardResult,
-  Employee,
-  EmployeeInput,
+  CreateTeamMemberInput,
   Holiday,
   ImportResult,
   Me,
-  Membership,
   RosterResponse,
   ShiftType,
   Subtrack,
-  TeamRole,
+  TeamMember,
   TeamSettings,
   TeamSummary,
   Track,
+  UnassignedPerson,
+  UpdateTeamMemberInput,
   UpdateTeamSettingsInput,
   UtilizationRow,
 } from '../types'
+
+// --- Auth ----------------------------------------------------------------
+
+// Either email or phone (or both) — whichever is given can log in with it later.
+export async function registerAccount(payload: { email?: string | null; phone?: string | null; password: string }): Promise<void> {
+  await api.post('/api/register-account', payload)
+}
+
+export async function loginWithPhone(phone: string, password: string): Promise<{ accessToken: string }> {
+  const res = await api.post('/api/login-phone', { phone, password })
+  return res.data
+}
 
 // --- Teams -------------------------------------------------------------------
 
@@ -32,28 +45,11 @@ export async function createTeam(name: string): Promise<TeamSummary> {
   return res.data
 }
 
-export async function getMembers(): Promise<Membership[]> {
+// --- Team members (merged Employees + Members) --------------------------------
+
+export async function getTeamMembers(): Promise<TeamMember[]> {
   const res = await api.get('/api/teams/current/members')
   return res.data
-}
-
-export async function addMember(payload: { email: string; role: TeamRole }): Promise<Membership> {
-  const res = await api.post('/api/teams/current/members', payload)
-  return res.data
-}
-
-export async function updateMemberRole(membershipId: number, role: TeamRole): Promise<Membership> {
-  const res = await api.patch(`/api/teams/current/members/${membershipId}`, { role })
-  return res.data
-}
-
-export async function linkMemberEmployee(membershipId: number, employeeId: string | null): Promise<Membership> {
-  const res = await api.patch(`/api/teams/current/members/${membershipId}/employee`, { employeeId })
-  return res.data
-}
-
-export async function removeMember(membershipId: number): Promise<void> {
-  await api.delete(`/api/teams/current/members/${membershipId}`)
 }
 
 export async function getMe(): Promise<Me> {
@@ -61,13 +57,47 @@ export async function getMe(): Promise<Me> {
   return res.data
 }
 
-export async function transferLead(membershipId: number): Promise<Membership> {
-  const res = await api.patch(`/api/teams/current/members/${membershipId}/lead`)
+export async function getNextTeamMemberCode(): Promise<string> {
+  const res = await api.get('/api/teams/current/members/next-code')
+  return res.data.code
+}
+
+export async function getUnassignedCandidates(): Promise<UnassignedPerson[]> {
+  const res = await api.get('/api/teams/current/members/unassigned-candidates')
   return res.data
 }
 
-export async function setCoLead(membershipId: number, isCoLead: boolean): Promise<Membership> {
-  const res = await api.patch(`/api/teams/current/members/${membershipId}/co-lead`, { isCoLead })
+export async function createTeamMember(payload: CreateTeamMemberInput): Promise<TeamMember> {
+  const res = await api.post('/api/teams/current/members', payload)
+  return res.data
+}
+
+export async function assignExistingPerson(payload: AssignPersonToTeamInput): Promise<TeamMember> {
+  const res = await api.post('/api/teams/current/members/assign-existing', payload)
+  return res.data
+}
+
+export async function updateTeamMember(id: number, payload: UpdateTeamMemberInput): Promise<TeamMember> {
+  const res = await api.put(`/api/teams/current/members/${id}`, payload)
+  return res.data
+}
+
+export async function updateMemberAccessRole(id: number, accessRole: string): Promise<TeamMember> {
+  const res = await api.patch(`/api/teams/current/members/${id}/role`, { accessRole })
+  return res.data
+}
+
+export async function removeMember(id: number): Promise<void> {
+  await api.delete(`/api/teams/current/members/${id}`)
+}
+
+export async function transferLead(id: number): Promise<TeamMember> {
+  const res = await api.patch(`/api/teams/current/members/${id}/lead`)
+  return res.data
+}
+
+export async function setCoLead(id: number, isCoLead: boolean): Promise<TeamMember> {
+  const res = await api.patch(`/api/teams/current/members/${id}/co-lead`, { isCoLead })
   return res.data
 }
 
@@ -85,8 +115,8 @@ export async function updateTeamSettings(payload: UpdateTeamSettingsInput): Prom
 
 // --- Comp-offs ---------------------------------------------------------------
 
-export async function getCompOffs(status?: CompOffStatus, employeeId?: string): Promise<CompOffEntry[]> {
-  const res = await api.get('/api/compoffs', { params: { status, employeeId } })
+export async function getCompOffs(status?: CompOffStatus, teamMemberId?: number): Promise<CompOffEntry[]> {
+  const res = await api.get('/api/compoffs', { params: { status, teamMemberId } })
   return res.data
 }
 
@@ -115,7 +145,7 @@ export async function getRoster(year: number, month: number): Promise<RosterResp
 }
 
 export async function upsertRosterEntry(payload: {
-  employeeId: string
+  teamMemberId: number
   date: string
   shiftCode: string | null
   note?: string | null
@@ -136,32 +166,6 @@ export interface CopyForwardRequest {
 export async function copyForward(payload: CopyForwardRequest): Promise<CopyForwardResult> {
   const res = await api.post('/api/roster/copy-forward', payload)
   return res.data
-}
-
-// --- Employees --------------------------------------------------------------
-
-export async function getEmployees(): Promise<Employee[]> {
-  const res = await api.get('/api/employees')
-  return res.data
-}
-
-export async function getNextEmployeeCode(): Promise<string> {
-  const res = await api.get('/api/employees/next-code')
-  return res.data.code
-}
-
-export async function createEmployee(payload: EmployeeInput): Promise<Employee> {
-  const res = await api.post('/api/employees', payload)
-  return res.data
-}
-
-export async function updateEmployee(id: string, payload: EmployeeInput): Promise<Employee> {
-  const res = await api.put(`/api/employees/${id}`, payload)
-  return res.data
-}
-
-export async function deleteEmployee(id: string): Promise<void> {
-  await api.delete(`/api/employees/${id}`)
 }
 
 // --- Tracks / Subtracks ------------------------------------------------------

@@ -6,7 +6,7 @@ import './Reports.css'
 
 type SortKey = keyof Pick<
   UtilizationRow,
-  'employeeName' | 'totalShiftsWorked' | 'weekendShiftsWorked' | 'compOffsEarned' | 'compOffsUsed' | 'compOffsPending'
+  'memberName' | 'totalShiftsWorked' | 'weekendShiftsWorked' | 'compOffsEarned' | 'compOffsUsed' | 'compOffsPending'
 >
 
 function firstOfMonthIso(): string {
@@ -89,7 +89,7 @@ export default function Reports() {
           <table className="data-table">
             <thead>
               <tr>
-                {headerFor('employeeName', 'Employee')}
+                {headerFor('memberName', 'Team member')}
                 <th>Track</th>
                 {headerFor('totalShiftsWorked', 'Shifts worked')}
                 {headerFor('weekendShiftsWorked', 'Weekend shifts')}
@@ -100,10 +100,10 @@ export default function Reports() {
             </thead>
             <tbody>
               {sorted.map((row) => (
-                <tr key={row.employeeId}>
+                <tr key={row.teamMemberId}>
                   <td>
-                    <div className="emp-name">{row.employeeName}</div>
-                    <div className="emp-meta mono">{row.employeeCode}</div>
+                    <div className="emp-name">{row.memberName}</div>
+                    <div className="emp-meta mono">{row.memberCode}</div>
                   </td>
                   <td>{row.trackName ?? '—'}</td>
                   <td className="mono">{row.totalShiftsWorked}</td>
@@ -120,7 +120,7 @@ export default function Reports() {
         </div>
       )}
 
-      {rows && rows.length === 0 && <div className="empty-state">No active employees on this team yet.</div>}
+      {rows && rows.length === 0 && <div className="empty-state">No active team members on this team yet.</div>}
     </div>
   )
 }

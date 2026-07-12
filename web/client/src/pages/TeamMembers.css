@@ -1,0 +1,108 @@
+.team-members-page {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.role-select {
+  padding: 5px 8px;
+  font-size: 12.5px;
+  border-radius: 6px;
+}
+
+.role-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.badge-lead,
+.badge-colead {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.badge-lead {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badge-colead {
+  background: var(--surface-soft);
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+}
+
+.badge-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.unassigned-panel {
+  padding: 18px 20px;
+  margin-bottom: 20px;
+}
+
+.unassigned-panel h3 {
+  font-size: 15px;
+  margin: 0 0 4px;
+}
+
+.unassigned-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  margin-top: 8px;
+  font-size: 13.5px;
+}
+
+/* Subtrack picker — select + inline "new subtrack" toggle, so adding one doesn't
+   require leaving the form and going to Settings. */
+.subtrack-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subtrack-add-toggle {
+  font-size: 12px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.subtrack-inline-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.subtrack-inline-add input {
+  flex: 1;
+}
+
+.team-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.team-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  text-transform: none;
+  font-weight: 400;
+}

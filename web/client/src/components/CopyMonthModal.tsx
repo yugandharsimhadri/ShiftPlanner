@@ -95,7 +95,7 @@ export default function CopyMonthModal({ sourceYear, sourceMonth, onClose, onCop
             <div className="field">
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, textTransform: 'none', fontWeight: 400 }}>
                 <input type="checkbox" checked={skipInactive} onChange={(e) => setSkipInactive(e.target.checked)} />
-                Skip inactive employees entirely
+                Skip inactive team members entirely
               </label>
             </div>
 
@@ -127,7 +127,7 @@ export default function CopyMonthModal({ sourceYear, sourceMonth, onClose, onCop
                   <table className="data-table">
                     <thead>
                       <tr>
-                        <th>Employee</th>
+                        <th>Team member</th>
                         <th>Date</th>
                         <th>Reason</th>
                       </tr>
@@ -135,7 +135,7 @@ export default function CopyMonthModal({ sourceYear, sourceMonth, onClose, onCop
                     <tbody>
                       {result.flagged.map((f, i) => (
                         <tr key={i}>
-                          <td>{f.employeeName}</td>
+                          <td>{f.memberName}</td>
                           <td className="mono">{f.date}</td>
                           <td>
                             <span className="badge">{f.reason}</span>

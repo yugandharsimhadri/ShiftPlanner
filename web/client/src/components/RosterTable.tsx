@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
-import type { DayOfWeekName, Employee, RosterEntry, ShiftType } from '../types'
+import type { DayOfWeekName, RosterEntry, ShiftType, TeamMember } from '../types'
 import { isTeamOffDay, toIsoDate, weekdayLetter } from '../lib/dates'
 import './RosterTable.css'
 
 interface Props {
-  employees: Employee[]
+  members: TeamMember[]
   year: number
   month: number
   days: number[]
@@ -13,14 +13,14 @@ interface Props {
   shiftTypesByCode: Map<string, ShiftType>
   holidaySet: Set<string>
   offDays: DayOfWeekName[]
-  onCellClick: (employeeId: string, date: string, el: HTMLElement) => void
+  onCellClick: (teamMemberId: number, date: string, el: HTMLElement) => void
   canEdit: boolean
 }
 
-const columnHelper = createColumnHelper<Employee>()
+const columnHelper = createColumnHelper<TeamMember>()
 
 export default function RosterTable({
-  employees,
+  members,
   year,
   month,
   days,
@@ -34,15 +34,15 @@ export default function RosterTable({
   const columns = useMemo(() => {
     const cols = [
       columnHelper.accessor('id', {
-        id: 'employee',
-        header: 'Employee',
+        id: 'member',
+        header: 'Team member',
         cell: (info) => {
-          const emp = info.row.original
+          const member = info.row.original
           return (
             <div className="emp-cell">
-              <div className="emp-name">{emp.name}</div>
+              <div className="emp-name">{member.name}</div>
               <div className="emp-meta mono">
-                {emp.code} · {emp.role}
+                {member.code} · {member.roleTitle}
               </div>
             </div>
           )
@@ -61,9 +61,9 @@ export default function RosterTable({
             )
           },
           cell: ({ row }) => {
-            const emp = row.original
+            const member = row.original
             const date = toIsoDate(year, month, day)
-            const entry = entriesMap.get(`${emp.id}|${date}`)
+            const entry = entriesMap.get(`${member.id}|${date}`)
             const shift = entry?.shiftCode ? shiftTypesByCode.get(entry.shiftCode) : undefined
             const offDay = isTeamOffDay(year, month, day, offDays)
             const workedOffDay = offDay && shift?.isWorkShift
@@ -76,7 +76,7 @@ export default function RosterTable({
                     : undefined
                 }
                 data-filled={!!shift}
-                onClick={(e) => canEdit && onCellClick(emp.id, date, e.currentTarget)}
+                onClick={(e) => canEdit && onCellClick(member.id, date, e.currentTarget)}
                 title={
                   shift
                     ? `${shift.name}${entry?.source === 'Copied' ? ' (copied)' : ''}${workedOffDay ? ' — earns a comp-off' : ''}`
@@ -98,7 +98,7 @@ export default function RosterTable({
   }, [days, entriesMap, shiftTypesByCode, holidaySet, offDays, year, month, onCellClick, canEdit])
 
   const table = useReactTable({
-    data: employees,
+    data: members,
     columns,
     getCoreRowModel: getCoreRowModel(),
   })
@@ -110,7 +110,7 @@ export default function RosterTable({
           {table.getHeaderGroups().map((hg) => (
             <tr key={hg.id}>
               {hg.headers.map((h) => (
-                <th key={h.id} className={h.column.id === 'employee' ? 'sticky-col' : ''}>
+                <th key={h.id} className={h.column.id === 'member' ? 'sticky-col' : ''}>
                   {flexRender(h.column.columnDef.header, h.getContext())}
                 </th>
               ))}
@@ -121,7 +121,7 @@ export default function RosterTable({
           {table.getRowModel().rows.map((row) => (
             <tr key={row.id}>
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className={cell.column.id === 'employee' ? 'sticky-col' : ''}>
+                <td key={cell.id} className={cell.column.id === 'member' ? 'sticky-col' : ''}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}

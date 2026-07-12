@@ -15,7 +15,7 @@ public static class ExportEndpoints
         group.MapGet("/excel", async (int year, int month, AppDbContext db, HttpContext http) =>
         {
             var teamId = http.GetTeamContext().TeamId;
-            var (employees, entries, days) = await LoadMonthData(db, teamId, year, month);
+            var (members, entries, days) = await LoadMonthData(db, teamId, year, month);
 
             using var wb = new XLWorkbook();
             var ws = wb.Worksheets.Add($"{year}-{month:D2}");
@@ -23,19 +23,21 @@ public static class ExportEndpoints
             ws.Cell(1, 1).Value = "Employee Code";
             ws.Cell(1, 2).Value = "Name";
             ws.Cell(1, 3).Value = "Track";
+            ws.Cell(1, 4).Value = "Location";
             for (var i = 0; i < days.Count; i++)
-                ws.Cell(1, 4 + i).Value = days[i].ToString("dd");
+                ws.Cell(1, 5 + i).Value = days[i].ToString("dd");
 
             var row = 2;
-            foreach (var emp in employees)
+            foreach (var member in members)
             {
-                ws.Cell(row, 1).Value = emp.Code;
-                ws.Cell(row, 2).Value = emp.Name;
-                ws.Cell(row, 3).Value = emp.Track?.Name ?? "";
+                ws.Cell(row, 1).Value = member.Code;
+                ws.Cell(row, 2).Value = member.Person?.Name ?? "";
+                ws.Cell(row, 3).Value = member.Track?.Name ?? "";
+                ws.Cell(row, 4).Value = member.Location ?? "";
                 for (var i = 0; i < days.Count; i++)
                 {
-                    var shiftCode = entries.FirstOrDefault(e => e.EmployeeId == emp.Id && e.Date == days[i])?.ShiftCode ?? "";
-                    ws.Cell(row, 4 + i).Value = shiftCode;
+                    var shiftCode = entries.FirstOrDefault(e => e.TeamMemberId == member.Id && e.Date == days[i])?.ShiftCode ?? "";
+                    ws.Cell(row, 5 + i).Value = shiftCode;
                 }
                 row++;
             }
@@ -54,21 +56,22 @@ public static class ExportEndpoints
         group.MapGet("/csv", async (int year, int month, AppDbContext db, HttpContext http) =>
         {
             var teamId = http.GetTeamContext().TeamId;
-            var (employees, entries, days) = await LoadMonthData(db, teamId, year, month);
+            var (members, entries, days) = await LoadMonthData(db, teamId, year, month);
 
             var sb = new StringBuilder();
-            sb.Append("Employee Code,Name,Track");
+            sb.Append("Employee Code,Name,Track,Location");
             foreach (var d in days) sb.Append(',').Append(d.ToString("dd"));
             sb.AppendLine();
 
-            foreach (var emp in employees)
+            foreach (var member in members)
             {
-                sb.Append(CsvEscape(emp.Code)).Append(',')
-                  .Append(CsvEscape(emp.Name)).Append(',')
-                  .Append(CsvEscape(emp.Track?.Name ?? ""));
+                sb.Append(CsvEscape(member.Code)).Append(',')
+                  .Append(CsvEscape(member.Person?.Name ?? "")).Append(',')
+                  .Append(CsvEscape(member.Track?.Name ?? "")).Append(',')
+                  .Append(CsvEscape(member.Location ?? ""));
                 foreach (var d in days)
                 {
-                    var shiftCode = entries.FirstOrDefault(e => e.EmployeeId == emp.Id && e.Date == d)?.ShiftCode ?? "";
+                    var shiftCode = entries.FirstOrDefault(e => e.TeamMemberId == member.Id && e.Date == d)?.ShiftCode ?? "";
                     sb.Append(',').Append(CsvEscape(shiftCode));
                 }
                 sb.AppendLine();
@@ -79,18 +82,20 @@ public static class ExportEndpoints
         }).RequireTeamMember();
     }
 
-    private static async Task<(List<Models.Employee> employees, List<Models.RosterEntry> entries, List<DateOnly> days)> LoadMonthData(AppDbContext db, int teamId, int year, int month)
+    private static async Task<(List<Models.TeamMember> members, List<Models.RosterEntry> entries, List<DateOnly> days)> LoadMonthData(AppDbContext db, int teamId, int year, int month)
     {
         var start = new DateOnly(year, month, 1);
         var end = start.AddMonths(1).AddDays(-1);
 
-        var employees = await db.Employees.Where(e => e.TeamId == teamId).Include(e => e.Track).OrderBy(e => e.Name).ToListAsync();
+        var members = await db.TeamMembers.Where(m => m.TeamId == teamId)
+            .Include(m => m.Person).Include(m => m.Track)
+            .OrderBy(m => m.Person!.Name).ToListAsync();
         var entries = await db.RosterEntries.Where(r => r.TeamId == teamId && r.Date >= start && r.Date <= end).ToListAsync();
 
         var days = new List<DateOnly>();
         for (var d = start; d <= end; d = d.AddDays(1)) days.Add(d);
 
-        return (employees, entries, days);
+        return (members, entries, days);
     }
 
     private static string CsvEscape(string value)

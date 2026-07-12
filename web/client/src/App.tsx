@@ -5,8 +5,7 @@ import Login from './pages/Login'
 import CreateTeam from './pages/CreateTeam'
 import SelectTeam from './pages/SelectTeam'
 import Roster from './pages/Roster'
-import Employees from './pages/Employees'
-import Members from './pages/Members'
+import TeamMembers from './pages/TeamMembers'
 import Settings from './pages/Settings'
 import Reports from './pages/Reports'
 
@@ -18,8 +17,7 @@ export default function App() {
       <Route path="/select-team" element={<SelectTeam />} />
       <Route element={<Layout />}>
         <Route path="/" element={<Roster />} />
-        <Route path="/employees" element={<Employees />} />
-        <Route path="/members" element={<Members />} />
+        <Route path="/members" element={<TeamMembers />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/reports" element={<Reports />} />
       </Route>

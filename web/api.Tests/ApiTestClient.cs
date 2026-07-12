@@ -68,15 +68,6 @@ public static class ApiTestClient
         return (await response.Content.ReadFromJsonAsync<List<TeamSummaryDto>>(JsonOptions))!;
     }
 
-    public static async Task<HttpResponseMessage> AddMemberAsync(this HttpClient client, string token, int teamId, string email, string role)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/teams/current/members")
-        {
-            Content = JsonContent.Create(new { email, role }, options: JsonOptions)
-        }.Authorized(token, teamId);
-        return await client.SendAsync(request);
-    }
-
     public static async Task<Models.Track> CreateTrackAsync(this HttpClient client, string token, int teamId, string name)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/tracks")
@@ -88,12 +79,27 @@ public static class ApiTestClient
         return (await response.Content.ReadFromJsonAsync<Models.Track>(JsonOptions))!;
     }
 
-    public static async Task<HttpResponseMessage> CreateEmployeeAsync(this HttpClient client, string token, int teamId, string code, string name, int trackId)
+    // Replaces the old separate "create an Employee" / "invite a Member by email" —
+    // a TeamMember row now covers both. trackId null and role "Viewer" by default fit
+    // an email-only invite; pass a track for a roster-record-style team member.
+    public static async Task<HttpResponseMessage> CreateTeamMemberAsync(
+        this HttpClient client, string token, int teamId, string code, string name,
+        int? trackId = null, string accessRole = "Viewer", string? email = null)
     {
-        var dto = new EmployeeDto(code, name, "555-0100", null, trackId, null, "Clerk",
-            Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today), Models.EmployeeStatus.Active, null);
-        var request = new HttpRequestMessage(HttpMethod.Post, "/api/employees") { Content = JsonContent.Create(dto, options: JsonOptions) }
-            .Authorized(token, teamId);
+        var dto = new CreateTeamMemberDto(
+            name, "555-0100", email, null, code, trackId, null, "Clerk", null,
+            Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today), Models.EmployeeStatus.Active,
+            Enum.Parse<Models.TeamRole>(accessRole), new List<int> { teamId });
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/teams/current/members")
+        {
+            Content = JsonContent.Create(dto, options: JsonOptions)
+        }.Authorized(token, teamId);
         return await client.SendAsync(request);
     }
+
+    // Mirrors the old "invite by email" flow: a minimal team member keyed by email,
+    // no roster fields — the person logs in later and the invite is claimed automatically.
+    public static Task<HttpResponseMessage> InviteMemberAsync(
+        this HttpClient client, string token, int teamId, string email, string role, string code = "EMP-002") =>
+        client.CreateTeamMemberAsync(token, teamId, code, email, trackId: null, accessRole: role, email: email);
 }

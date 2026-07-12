@@ -50,13 +50,26 @@ public static class DbSeeder
         db.Teams.Add(team);
         db.SaveChanges();
 
-        db.TeamMemberships.Add(new TeamMembership
+        var adminPerson = new Person
+        {
+            Name = "Admin",
+            Phone = "0000000000",
+            Email = AdminEmail,
+            UserId = admin.Id,
+            CreatedByUserId = admin.Id,
+        };
+        db.People.Add(adminPerson);
+        db.SaveChanges();
+
+        db.TeamMembers.Add(new TeamMember
         {
             TeamId = team.Id,
-            UserId = admin.Id,
-            Email = AdminEmail,
-            Role = TeamRole.Admin,
-            Status = MembershipStatus.Active,
+            PersonId = adminPerson.Id,
+            Code = "EMP-001",
+            RoleTitle = "Admin",
+            EmploymentType = EmploymentType.FullTime,
+            JoinDate = DateOnly.FromDateTime(DateTime.Today),
+            AccessRole = TeamRole.Admin,
             IsTeamLead = true,
         });
 

@@ -10,8 +10,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<Team> Teams => Set<Team>();
-    public DbSet<TeamMembership> TeamMemberships => Set<TeamMembership>();
-    public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<Person> People => Set<Person>();
+    public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
     public DbSet<Track> Tracks => Set<Track>();
     public DbSet<Subtrack> Subtracks => Set<Subtrack>();
     public DbSet<ShiftType> ShiftTypes => Set<ShiftType>();
@@ -23,39 +23,38 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
     {
         base.OnModelCreating(builder);
 
-        // --- Team / membership -----------------------------------------------
+        // --- Team members ------------------------------------------------------
+        // TeamMember is both "who has access to this team" and "who is on this
+        // team's roster" — one row per (team, person). Every one of these tenant-
+        // scoped tables carries TeamId directly (not just via a join) so no query
+        // can accidentally leak across teams by forgetting to traverse a relationship.
 
-        builder.Entity<TeamMembership>()
+        builder.Entity<TeamMember>()
             .HasOne(m => m.Team)
             .WithMany()
             .HasForeignKey(m => m.TeamId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // One membership row per (team, email) — re-inviting the same email just
-        // updates the existing row rather than duplicating it.
-        builder.Entity<TeamMembership>()
-            .HasIndex(m => new { m.TeamId, m.Email })
-            .IsUnique();
+        builder.Entity<TeamMember>()
+            .HasOne(m => m.Person)
+            .WithMany()
+            .HasForeignKey(m => m.PersonId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-        // --- Tenant-scoped tables ----------------------------------------------
-        // Every one of these carries TeamId directly (not just via a join) so no
-        // query can accidentally leak across teams by forgetting to traverse a
-        // relationship — every endpoint filters on TeamId as a plain column.
-
-        builder.Entity<Employee>()
-            .HasOne(e => e.Track)
-            .WithMany(t => t.Employees)
-            .HasForeignKey(e => e.TrackId)
+        builder.Entity<TeamMember>()
+            .HasOne(m => m.Track)
+            .WithMany(t => t.TeamMembers)
+            .HasForeignKey(m => m.TrackId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.Entity<Employee>()
-            .HasOne(e => e.Subtrack)
+        builder.Entity<TeamMember>()
+            .HasOne(m => m.Subtrack)
             .WithMany()
-            .HasForeignKey(e => e.SubtrackId)
+            .HasForeignKey(m => m.SubtrackId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        builder.Entity<Employee>()
-            .HasIndex(e => new { e.TeamId, e.Code })
+        builder.Entity<TeamMember>()
+            .HasIndex(m => new { m.TeamId, m.Code })
             .IsUnique();
 
         builder.Entity<Subtrack>()
@@ -69,19 +68,19 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
             .IsUnique();
 
         builder.Entity<RosterEntry>()
-            .HasOne(r => r.Employee)
+            .HasOne(r => r.TeamMember)
             .WithMany()
-            .HasForeignKey(r => r.EmployeeId)
+            .HasForeignKey(r => r.TeamMemberId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.Entity<RosterEntry>()
-            .HasIndex(r => new { r.EmployeeId, r.Date })
+            .HasIndex(r => new { r.TeamMemberId, r.Date })
             .IsUnique();
 
         builder.Entity<CompOffEntry>()
-            .HasOne(c => c.Employee)
+            .HasOne(c => c.TeamMember)
             .WithMany()
-            .HasForeignKey(c => c.EmployeeId)
+            .HasForeignKey(c => c.TeamMemberId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

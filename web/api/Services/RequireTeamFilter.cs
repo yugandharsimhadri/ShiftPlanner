@@ -6,11 +6,11 @@ using ShiftPlanner.Api.Models;
 namespace ShiftPlanner.Api.Services;
 
 // Runs before any tenant-scoped endpoint. Requires an authenticated user, an
-// "X-Team-Id" header naming a team, and an active membership in that team —
-// and if minRole is set, that the membership's role meets it. Also claims any
-// pending (email-only) invites for the caller's email before checking, which is
-// how "the same email was added to two teams" resolves into two memberships on
-// whichever account later logs in with that email.
+// "X-Team-Id" header naming a team, and a TeamMember row in that team whose Person
+// is linked to this login — and if minRole is set, that the member's AccessRole
+// meets it. Also claims any pending (not-yet-logged-in) People for the caller's
+// email/phone before checking, which is how "the same email or phone was added to
+// two teams" resolves into two TeamMember rows on whichever account later logs in.
 public sealed class RequireTeamFilter : IEndpointFilter
 {
     private readonly TeamRole? _minRole;
@@ -25,10 +25,10 @@ public sealed class RequireTeamFilter : IEndpointFilter
         var userId = http.User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId is null) return Results.Unauthorized();
 
-        var email = await db.Users.Where(u => u.Id == userId).Select(u => u.Email).FirstOrDefaultAsync();
-        if (string.IsNullOrEmpty(email)) return Results.Unauthorized();
+        var user = await db.Users.Where(u => u.Id == userId).Select(u => new { u.Email, u.PhoneNumber }).FirstOrDefaultAsync();
+        if (user is null) return Results.Unauthorized();
 
-        await PendingInviteClaimer.ClaimAsync(db, userId, email);
+        await PendingInviteClaimer.ClaimAsync(db, userId, user.Email, user.PhoneNumber);
 
         if (!http.Request.Headers.TryGetValue("X-Team-Id", out var teamIdHeader) ||
             !int.TryParse(teamIdHeader, out var teamId))
@@ -36,21 +36,22 @@ public sealed class RequireTeamFilter : IEndpointFilter
             return Results.BadRequest(new { message = "Missing or invalid X-Team-Id header." });
         }
 
-        var membership = await db.TeamMemberships.FirstOrDefaultAsync(m =>
-            m.TeamId == teamId && m.UserId == userId && m.Status == MembershipStatus.Active);
+        var member = await db.TeamMembers
+            .Include(m => m.Person)
+            .FirstOrDefaultAsync(m => m.TeamId == teamId && m.Person!.UserId == userId);
 
-        if (membership is null)
+        if (member is null)
             return Results.StatusCode(StatusCodes.Status403Forbidden);
 
-        if (_minRole is { } required && RoleRank(membership.Role) < RoleRank(required))
+        if (_minRole is { } required && RoleRank(member.AccessRole) < RoleRank(required))
             return Results.StatusCode(StatusCodes.Status403Forbidden);
 
         http.SetTeamContext(new TeamContext
         {
             UserId = userId,
-            Email = email,
+            Email = user.Email ?? string.Empty,
             TeamId = teamId,
-            Role = membership.Role
+            Role = member.AccessRole
         });
 
         return await next(context);

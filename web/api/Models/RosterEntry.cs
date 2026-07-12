@@ -7,10 +7,10 @@ public class RosterEntry
     public int Id { get; set; }
     public int TeamId { get; set; }
 
-    public Guid EmployeeId { get; set; }
+    public int TeamMemberId { get; set; }
 
     [JsonIgnore]
-    public Employee? Employee { get; set; }
+    public TeamMember? TeamMember { get; set; }
 
     public DateOnly Date { get; set; }
 

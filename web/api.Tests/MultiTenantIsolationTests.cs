@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using ShiftPlanner.Api.Dtos;
 using ShiftPlanner.Api.Models;
 using Xunit;
 
@@ -24,7 +25,7 @@ public class MultiTenantIsolationTests : IClassFixture<TestWebApplicationFactory
     }
 
     [Fact]
-    public async Task Team_B_cannot_see_Team_As_employees()
+    public async Task Team_B_cannot_see_Team_As_team_members()
     {
         var client = _factory.CreateClient();
         var tokenA = await client.RegisterAndLoginAsync("owner-a1@test.local");
@@ -34,14 +35,15 @@ public class MultiTenantIsolationTests : IClassFixture<TestWebApplicationFactory
         var teamB = await client.CreateTeamAsync(tokenB, "Team B1");
 
         var track = await client.CreateTrackAsync(tokenA, teamA.Id, "Ops");
-        var createResponse = await client.CreateEmployeeAsync(tokenA, teamA.Id, "EMP-001", "Alice", track.Id);
+        var createResponse = await client.CreateTeamMemberAsync(tokenA, teamA.Id, "EMP-002", "Alice", track.Id);
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
-        var listRequest = new HttpRequestMessage(HttpMethod.Get, "/api/employees").Authorized(tokenB, teamB.Id);
+        var listRequest = new HttpRequestMessage(HttpMethod.Get, "/api/teams/current/members").Authorized(tokenB, teamB.Id);
         var listResponse = await client.SendAsync(listRequest);
-        var employees = await listResponse.Content.ReadFromJsonAsync<List<Employee>>(ApiTestClient.JsonOptions);
+        var members = await listResponse.Content.ReadFromJsonAsync<List<TeamMemberDto>>(ApiTestClient.JsonOptions);
 
-        Assert.Empty(employees!);
+        // Only teamB's own creator-admin row should show — none of Team A's.
+        Assert.DoesNotContain(members!, m => m.Name == "Alice");
     }
 
     [Fact]
@@ -54,7 +56,7 @@ public class MultiTenantIsolationTests : IClassFixture<TestWebApplicationFactory
         var teamA = await client.CreateTeamAsync(tokenA, "Team A2");
         var teamB = await client.CreateTeamAsync(tokenB, "Team B2");
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/employees").Authorized(tokenA, teamB.Id);
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/teams/current/members").Authorized(tokenA, teamB.Id);
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -66,7 +68,7 @@ public class MultiTenantIsolationTests : IClassFixture<TestWebApplicationFactory
         var client = _factory.CreateClient();
         var token = await client.RegisterAndLoginAsync("noteam@test.local");
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/employees").Authorized(token);
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/teams/current/members").Authorized(token);
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -82,8 +84,8 @@ public class MultiTenantIsolationTests : IClassFixture<TestWebApplicationFactory
         var teamA = await client.CreateTeamAsync(tokenA, "Team A3");
         var teamB = await client.CreateTeamAsync(tokenB, "Team B3");
 
-        var addToA = await client.AddMemberAsync(tokenA, teamA.Id, "shared3@test.local", "Editor");
-        var addToB = await client.AddMemberAsync(tokenB, teamB.Id, "shared3@test.local", "Viewer");
+        var addToA = await client.InviteMemberAsync(tokenA, teamA.Id, "shared3@test.local", "Editor");
+        var addToB = await client.InviteMemberAsync(tokenB, teamB.Id, "shared3@test.local", "Viewer");
         Assert.True(addToA.IsSuccessStatusCode);
         Assert.True(addToB.IsSuccessStatusCode);
 
@@ -98,7 +100,7 @@ public class MultiTenantIsolationTests : IClassFixture<TestWebApplicationFactory
     }
 
     [Fact]
-    public async Task Employee_code_only_needs_to_be_unique_within_a_team_not_globally()
+    public async Task Team_member_code_only_needs_to_be_unique_within_a_team_not_globally()
     {
         var client = _factory.CreateClient();
         var tokenA = await client.RegisterAndLoginAsync("owner-a4@test.local");
@@ -110,23 +112,23 @@ public class MultiTenantIsolationTests : IClassFixture<TestWebApplicationFactory
         var trackA = await client.CreateTrackAsync(tokenA, teamA.Id, "Ops");
         var trackB = await client.CreateTrackAsync(tokenB, teamB.Id, "Ops");
 
-        var first = await client.CreateEmployeeAsync(tokenA, teamA.Id, "EMP-001", "Alice", trackA.Id);
-        var second = await client.CreateEmployeeAsync(tokenB, teamB.Id, "EMP-001", "Bob", trackB.Id);
+        var first = await client.CreateTeamMemberAsync(tokenA, teamA.Id, "EMP-002", "Alice", trackA.Id);
+        var second = await client.CreateTeamMemberAsync(tokenB, teamB.Id, "EMP-002", "Bob", trackB.Id);
 
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         Assert.Equal(HttpStatusCode.Created, second.StatusCode);
     }
 
     [Fact]
-    public async Task Employee_code_must_be_unique_within_the_same_team()
+    public async Task Team_member_code_must_be_unique_within_the_same_team()
     {
         var client = _factory.CreateClient();
         var token = await client.RegisterAndLoginAsync("owner-dup@test.local");
         var team = await client.CreateTeamAsync(token, "Team Dup");
         var track = await client.CreateTrackAsync(token, team.Id, "Ops");
 
-        var first = await client.CreateEmployeeAsync(token, team.Id, "EMP-001", "Alice", track.Id);
-        var second = await client.CreateEmployeeAsync(token, team.Id, "EMP-001", "Bob", track.Id);
+        var first = await client.CreateTeamMemberAsync(token, team.Id, "EMP-002", "Alice", track.Id);
+        var second = await client.CreateTeamMemberAsync(token, team.Id, "EMP-002", "Bob", track.Id);
 
         Assert.Equal(HttpStatusCode.Created, first.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);

@@ -6,7 +6,7 @@ import './Layout.css'
 
 export default function Layout() {
   const { isAuthenticated, logout } = useAuth()
-  const { teams, isLoading, currentTeam, currentRole } = useTeam()
+  const { teams, isLoading, currentTeam } = useTeam()
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (isLoading) return <div className="app-loading">Loading your teams…</div>
@@ -24,14 +24,9 @@ export default function Layout() {
           <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
             Roster
           </NavLink>
-          <NavLink to="/employees" className={({ isActive }) => (isActive ? 'active' : '')}>
-            Employees
+          <NavLink to="/members" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Team Members
           </NavLink>
-          {currentRole === 'Admin' && (
-            <NavLink to="/members" className={({ isActive }) => (isActive ? 'active' : '')}>
-              Members
-            </NavLink>
-          )}
           <NavLink to="/settings" className={({ isActive }) => (isActive ? 'active' : '')}>
             Settings
           </NavLink>

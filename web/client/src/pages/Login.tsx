@@ -7,7 +7,7 @@ export default function Login() {
   const { isAuthenticated, login, register } = useAuth()
   const navigate = useNavigate()
   const [mode, setMode] = useState<'signin' | 'register'>('signin')
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -19,17 +19,16 @@ export default function Login() {
     setError(null)
     setLoading(true)
     try {
-      if (mode === 'register') await register(email, password)
-      else await login(email, password)
+      if (mode === 'register') await register(identifier, password)
+      else await login(identifier, password)
       navigate('/', { replace: true })
     } catch (err: any) {
       if (mode === 'register') {
-        const messages = err?.response?.data?.errors
-          ? Object.values(err.response.data.errors).flat().join(' ')
-          : null
-        setError(messages || 'Could not create that account. The email may already be registered.')
+        const messages = err?.response?.data?.message
+          ?? (err?.response?.data?.errors ? Object.values(err.response.data.errors).flat().join(' ') : null)
+        setError(messages || 'Could not create that account. It may already be registered.')
       } else {
-        setError('Invalid email or password.')
+        setError('Invalid email/phone or password.')
       }
     } finally {
       setLoading(false)
@@ -70,14 +69,14 @@ export default function Login() {
         </div>
 
         <div className="field">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="identifier">Email or phone number</label>
           <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            id="identifier"
+            type="text"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
             autoComplete="username"
-            placeholder="you@company.com"
+            placeholder="you@company.com or your phone number"
             required
           />
         </div>

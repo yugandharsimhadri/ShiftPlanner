@@ -13,13 +13,14 @@ public static class TeamsEndpoints
     {
         var group = app.MapGroup("/api/teams").RequireAuthorization();
 
-        // Create a team. The caller becomes its Admin and Lead immediately. Team names
-        // aren't unique platform-wide (two different people can both have a "Warehouse
-        // Team"), but the same person can't create two teams with the same name.
+        // Create a team. The caller becomes its Admin and Lead immediately — as a
+        // TeamMember, same as everyone else, not a separate concept. Team names
+        // aren't unique platform-wide, but the same person can't create two teams
+        // with the same name.
         group.MapPost("", async (CreateTeamDto dto, AppDbContext db, ClaimsPrincipal user) =>
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var email = await db.Users.Where(u => u.Id == userId).Select(u => u.Email).FirstAsync();
+            var account = await db.Users.Where(u => u.Id == userId).Select(u => new { u.Email, u.PhoneNumber }).FirstAsync();
 
             var name = dto.Name.Trim();
             if (string.IsNullOrWhiteSpace(name))
@@ -34,13 +35,32 @@ public static class TeamsEndpoints
             db.Teams.Add(team);
             await db.SaveChangesAsync();
 
-            db.TeamMemberships.Add(new TeamMembership
+            // Reuse an existing Person for this login if one's already linked (e.g. they
+            // were added to another team earlier and it got claimed); otherwise create one.
+            var person = await db.People.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (person is null)
+            {
+                person = new Person
+                {
+                    Name = account.Email ?? account.PhoneNumber ?? "Admin",
+                    Phone = account.PhoneNumber,
+                    Email = account.Email,
+                    UserId = userId,
+                    CreatedByUserId = userId,
+                };
+                db.People.Add(person);
+                await db.SaveChangesAsync();
+            }
+
+            db.TeamMembers.Add(new TeamMember
             {
                 TeamId = team.Id,
-                UserId = userId,
-                Email = email!,
-                Role = TeamRole.Admin,
-                Status = MembershipStatus.Active,
+                PersonId = person.Id,
+                Code = "EMP-001",
+                RoleTitle = "Admin",
+                EmploymentType = EmploymentType.FullTime,
+                JoinDate = DateOnly.FromDateTime(DateTime.Today),
+                AccessRole = TeamRole.Admin,
                 IsTeamLead = true,
             });
             await db.SaveChangesAsync();
@@ -48,173 +68,317 @@ public static class TeamsEndpoints
             return Results.Created($"/api/teams/{team.Id}", new TeamSummaryDto(team.Id, team.Name, TeamRole.Admin));
         });
 
-        // List every team the caller belongs to, with their role in each — this is
-        // what powers the team switcher. Also claims any pending invites first, so
-        // a team an admin just added this email to shows up immediately.
+        // List every team the caller belongs to, with their role in each — powers the
+        // team switcher. Also claims any not-yet-linked People first, so a team an
+        // admin just added this email/phone to shows up immediately.
         group.MapGet("/mine", async (AppDbContext db, ClaimsPrincipal user) =>
         {
             var userId = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
-            var email = await db.Users.Where(u => u.Id == userId).Select(u => u.Email).FirstAsync();
+            var account = await db.Users.Where(u => u.Id == userId).Select(u => new { u.Email, u.PhoneNumber }).FirstAsync();
 
-            await PendingInviteClaimer.ClaimAsync(db, userId, email!);
+            await PendingInviteClaimer.ClaimAsync(db, userId, account.Email, account.PhoneNumber);
 
-            var teams = await db.TeamMemberships
-                .Where(m => m.UserId == userId && m.Status == MembershipStatus.Active)
+            var teams = await db.TeamMembers
+                .Where(m => m.Person!.UserId == userId)
                 .Include(m => m.Team)
-                .Select(m => new TeamSummaryDto(m.TeamId, m.Team!.Name, m.Role))
+                .Select(m => new TeamSummaryDto(m.TeamId, m.Team!.Name, m.AccessRole))
                 .ToListAsync();
 
             return Results.Ok(teams);
         });
 
-        // --- Member management (scoped to the team named in X-Team-Id) ---------
+        // --- Team members (scoped to the team named in X-Team-Id) --------------
+        // One list, one entity — a TeamMember is both "has access" and "is on the
+        // roster." Read access is open to any member; creating/editing/removing is
+        // Admin-only, since adding someone here can also grant them Editor/Admin access.
 
         var members = app.MapGroup("/api/teams/current/members");
 
         members.MapGet("", async (AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
-            var list = await db.TeamMemberships
+            var list = await db.TeamMembers
                 .Where(m => m.TeamId == ctx.TeamId)
-                .OrderBy(m => m.Email)
-                .Select(m => new MembershipDto(m.Id, m.Email, m.Role, m.Status, m.EmployeeId, m.CreatedAt, m.IsTeamLead, m.IsCoLead))
+                .Include(m => m.Person)
+                .Include(m => m.Track)
+                .Include(m => m.Subtrack)
+                .OrderBy(m => m.Person!.Name)
                 .ToListAsync();
-            return Results.Ok(list);
+
+            return Results.Ok(list.Select(ToDto));
         }).RequireTeamMember();
 
-        // The caller's own membership on the current team — role, and the employee record
-        // an admin has linked them to (if any). Mobile uses this to resolve "my shifts"
-        // automatically instead of asking the person to type in their own employee code.
+        // The caller's own team-member record on the current team.
         members.MapGet("/me", async (AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
-            var membership = await db.TeamMemberships
-                .Where(m => m.TeamId == ctx.TeamId && m.UserId == ctx.UserId)
-                .Select(m => new { m.Role, m.EmployeeId, m.IsTeamLead, m.IsCoLead })
-                .FirstOrDefaultAsync();
+            var member = await db.TeamMembers
+                .Include(m => m.Person)
+                .FirstOrDefaultAsync(m => m.TeamId == ctx.TeamId && m.Person!.UserId == ctx.UserId);
 
-            if (membership is null) return Results.NotFound();
-
-            string? employeeCode = null;
-            if (membership.EmployeeId is { } employeeId)
-            {
-                employeeCode = await db.Employees
-                    .Where(e => e.Id == employeeId && e.TeamId == ctx.TeamId)
-                    .Select(e => e.Code)
-                    .FirstOrDefaultAsync();
-            }
-
-            return Results.Ok(new MeDto(ctx.Email, membership.Role, membership.EmployeeId, employeeCode, membership.IsTeamLead, membership.IsCoLead));
+            if (member is null) return Results.NotFound();
+            return Results.Ok(new MeDto(member.Person!.Name, member.Code, member.AccessRole, member.IsTeamLead, member.IsCoLead));
         }).RequireTeamMember();
 
-        members.MapPost("", async (AddMemberDto dto, AppDbContext db, HttpContext http) =>
+        // A suggested next code (e.g. "EMP-004") for the add-member form to pre-fill —
+        // still editable, since Code is per-team and user-chosen.
+        members.MapGet("/next-code", async (AppDbContext db, HttpContext http) =>
+        {
+            var teamId = http.GetTeamContext().TeamId;
+            return Results.Ok(new { code = await ImportEndpoints.SuggestNextTeamMemberCode(db, teamId) });
+        }).RequireTeamMember();
+
+        // People this admin already manages (on any of their teams) who aren't yet
+        // assigned to THIS team — candidates for "add to this team too."
+        members.MapGet("/unassigned-candidates", async (AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
-            var email = dto.Email.Trim().ToLowerInvariant();
-            if (string.IsNullOrWhiteSpace(email))
-                return Results.BadRequest(new { message = "Email is required." });
+            var alreadyHere = db.TeamMembers.Where(m => m.TeamId == ctx.TeamId).Select(m => m.PersonId);
 
-            var existing = await db.TeamMemberships
-                .FirstOrDefaultAsync(m => m.TeamId == ctx.TeamId && m.Email == email);
+            var candidates = await db.People
+                .Where(p => p.CreatedByUserId == ctx.UserId && !alreadyHere.Contains(p.Id))
+                .Select(p => new UnassignedPersonDto(p.Id, p.Name, p.Phone ?? "", p.Email))
+                .ToListAsync();
 
-            if (existing is not null)
+            return Results.Ok(candidates);
+        }).RequireTeamAdmin();
+
+        // Creates a new person plus one TeamMember row per requested team (TeamIds may
+        // be empty, leaving them recorded but unassigned anywhere). The caller must be
+        // Admin on every requested team, not just the current one.
+        members.MapPost("", async (CreateTeamMemberDto dto, AppDbContext db, HttpContext http) =>
+        {
+            var ctx = http.GetTeamContext();
+            var name = dto.Name.Trim();
+            var phone = dto.Phone.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                return Results.BadRequest(new { message = "Name is required." });
+
+            var teamIds = (dto.TeamIds ?? new List<int>()).Distinct().ToList();
+            foreach (var teamId in teamIds)
             {
-                // Re-adding an existing member just updates their role.
-                existing.Role = dto.Role;
-                await db.SaveChangesAsync();
-                return Results.Ok(new MembershipDto(existing.Id, existing.Email, existing.Role, existing.Status, existing.EmployeeId, existing.CreatedAt, existing.IsTeamLead, existing.IsCoLead));
+                var isAdminThere = await db.TeamMembers.AnyAsync(m =>
+                    m.TeamId == teamId && m.Person!.UserId == ctx.UserId && m.AccessRole == TeamRole.Admin);
+                if (!isAdminThere)
+                    return Results.Forbid();
             }
 
-            var matchingUserId = await db.Users.Where(u => u.Email == email).Select(u => u.Id).FirstOrDefaultAsync();
+            var code = dto.Code.Trim();
+            if (teamIds.Count > 0)
+            {
+                if (string.IsNullOrWhiteSpace(code))
+                    return Results.BadRequest(new { message = "Code is required when assigning to a team." });
 
-            var membership = new TeamMembership
+                foreach (var teamId in teamIds)
+                {
+                    if (await db.TeamMembers.AnyAsync(m => m.TeamId == teamId && m.Code == code))
+                        return Results.Conflict(new { message = $"Code '{code}' is already in use on one of the selected teams." });
+                }
+            }
+
+            var email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim();
+            var person = new Person
+            {
+                Name = name,
+                Phone = string.IsNullOrWhiteSpace(phone) ? null : phone,
+                Email = email,
+                Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim(),
+                CreatedByUserId = ctx.UserId,
+            };
+
+            // If this phone/email already belongs to a signed-in account, link immediately
+            // instead of waiting for them to log in.
+            var matchingUser = await db.Users.FirstOrDefaultAsync(u =>
+                (email != null && u.Email == email) || (person.Phone != null && u.PhoneNumber == person.Phone));
+            if (matchingUser is not null) person.UserId = matchingUser.Id;
+
+            db.People.Add(person);
+            await db.SaveChangesAsync();
+
+            TeamMember? primary = null;
+            foreach (var teamId in teamIds)
+            {
+                var member = new TeamMember
+                {
+                    TeamId = teamId,
+                    PersonId = person.Id,
+                    Code = code,
+                    TrackId = dto.TrackId,
+                    SubtrackId = dto.SubtrackId,
+                    RoleTitle = dto.RoleTitle,
+                    Location = string.IsNullOrWhiteSpace(dto.Location) ? null : dto.Location.Trim(),
+                    EmploymentType = dto.EmploymentType,
+                    JoinDate = dto.JoinDate,
+                    Status = dto.Status,
+                    Notes = person.Notes,
+                    AccessRole = dto.AccessRole,
+                };
+                db.TeamMembers.Add(member);
+                if (teamId == ctx.TeamId) primary = member;
+                primary ??= member;
+            }
+            await db.SaveChangesAsync();
+
+            if (primary is null)
+                return Results.Created($"/api/teams/current/members/unassigned/{person.Id}",
+                    new UnassignedPersonDto(person.Id, person.Name, person.Phone ?? "", person.Email));
+
+            return Results.Created($"/api/teams/current/members/{primary.Id}", await BuildDto(db, primary, person));
+        }).RequireTeamAdmin();
+
+        // Adds an already-known person (one you manage elsewhere) to the current team.
+        members.MapPost("/assign-existing", async (AssignPersonToTeamDto dto, AppDbContext db, HttpContext http) =>
+        {
+            var ctx = http.GetTeamContext();
+            if (dto.TeamId != ctx.TeamId)
+                return Results.BadRequest(new { message = "Team mismatch." });
+
+            var person = await db.People.FirstOrDefaultAsync(p => p.Id == dto.PersonId && p.CreatedByUserId == ctx.UserId);
+            if (person is null) return Results.NotFound();
+
+            var code = dto.Code.Trim();
+            if (string.IsNullOrWhiteSpace(code))
+                return Results.BadRequest(new { message = "Code is required." });
+            if (await db.TeamMembers.AnyAsync(m => m.TeamId == ctx.TeamId && m.Code == code))
+                return Results.Conflict(new { message = $"Code '{code}' is already in use on this team." });
+            if (await db.TeamMembers.AnyAsync(m => m.TeamId == ctx.TeamId && m.PersonId == person.Id))
+                return Results.Conflict(new { message = "This person is already on this team." });
+
+            var member = new TeamMember
             {
                 TeamId = ctx.TeamId,
-                Email = email,
-                Role = dto.Role,
-                UserId = matchingUserId,
-                Status = matchingUserId is null ? MembershipStatus.Invited : MembershipStatus.Active
+                PersonId = person.Id,
+                Code = code,
+                TrackId = dto.TrackId,
+                SubtrackId = dto.SubtrackId,
+                RoleTitle = dto.RoleTitle,
+                Location = string.IsNullOrWhiteSpace(dto.Location) ? null : dto.Location.Trim(),
+                EmploymentType = dto.EmploymentType,
+                JoinDate = dto.JoinDate,
+                AccessRole = dto.AccessRole,
             };
-            db.TeamMemberships.Add(membership);
+            db.TeamMembers.Add(member);
             await db.SaveChangesAsync();
 
-            return Results.Created($"/api/teams/current/members/{membership.Id}",
-                new MembershipDto(membership.Id, membership.Email, membership.Role, membership.Status, membership.EmployeeId, membership.CreatedAt, membership.IsTeamLead, membership.IsCoLead));
+            return Results.Created($"/api/teams/current/members/{member.Id}", await BuildDto(db, member, person));
         }).RequireTeamAdmin();
 
-        members.MapPatch("/{membershipId:int}", async (int membershipId, UpdateMemberRoleDto dto, AppDbContext db, HttpContext http) =>
+        // Full edit — including the shared Person fields (name/phone/email/notes), since
+        // those genuinely belong to the person, not just this one team's row.
+        members.MapPut("/{memberId:int}", async (int memberId, UpdateTeamMemberDto dto, AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
-            var membership = await db.TeamMemberships.FirstOrDefaultAsync(m => m.Id == membershipId && m.TeamId == ctx.TeamId);
-            if (membership is null) return Results.NotFound();
+            var member = await db.TeamMembers.Include(m => m.Person)
+                .FirstOrDefaultAsync(m => m.Id == memberId && m.TeamId == ctx.TeamId);
+            if (member is null) return Results.NotFound();
 
-            if (membership.Role == TeamRole.Admin && dto.Role != TeamRole.Admin)
+            var code = dto.Code.Trim();
+            if (string.IsNullOrWhiteSpace(code))
+                return Results.BadRequest(new { message = "Code is required." });
+            if (code != member.Code && await db.TeamMembers.AnyAsync(m => m.TeamId == ctx.TeamId && m.Code == code && m.Id != memberId))
+                return Results.Conflict(new { message = $"Code '{code}' is already in use on this team." });
+
+            member.Person!.Name = dto.Name.Trim();
+            member.Person.Phone = string.IsNullOrWhiteSpace(dto.Phone) ? null : dto.Phone.Trim();
+            member.Person.Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email.Trim();
+            member.Person.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+
+            member.Code = code;
+            member.TrackId = dto.TrackId;
+            member.SubtrackId = dto.SubtrackId;
+            member.RoleTitle = dto.RoleTitle;
+            member.Location = string.IsNullOrWhiteSpace(dto.Location) ? null : dto.Location.Trim();
+            member.EmploymentType = dto.EmploymentType;
+            member.JoinDate = dto.JoinDate;
+            member.Status = dto.Status;
+            member.Notes = string.IsNullOrWhiteSpace(dto.Notes) ? null : dto.Notes.Trim();
+
+            if (member.AccessRole == TeamRole.Admin && dto.AccessRole != TeamRole.Admin)
             {
-                var otherAdmins = await db.TeamMemberships.CountAsync(m =>
-                    m.TeamId == ctx.TeamId && m.Role == TeamRole.Admin && m.Id != membershipId);
+                var otherAdmins = await db.TeamMembers.CountAsync(m =>
+                    m.TeamId == ctx.TeamId && m.AccessRole == TeamRole.Admin && m.Id != memberId);
                 if (otherAdmins == 0)
                     return Results.BadRequest(new { message = "A team needs at least one Admin — promote someone else first." });
-
-                if (membership.IsTeamLead)
-                    return Results.BadRequest(new { message = "Transfer the lead to someone else before demoting this membership." });
-
-                membership.IsCoLead = false;
+                if (member.IsTeamLead)
+                    return Results.BadRequest(new { message = "Transfer the lead to someone else before demoting this member." });
+                member.IsCoLead = false;
             }
+            member.AccessRole = dto.AccessRole;
 
-            membership.Role = dto.Role;
             await db.SaveChangesAsync();
-            return Results.Ok(new MembershipDto(membership.Id, membership.Email, membership.Role, membership.Status, membership.EmployeeId, membership.CreatedAt, membership.IsTeamLead, membership.IsCoLead));
+            return Results.Ok(await BuildDto(db, member, member.Person));
         }).RequireTeamAdmin();
 
-        // Transfers the "Lead" label to another Admin on this team. Restricted to whoever
-        // currently holds it — Lead/Co-Lead are labels on top of Admin, not a separate
-        // permission tier, but only the Lead should be able to hand the title off.
-        members.MapPatch("/{membershipId:int}/lead", async (int membershipId, AppDbContext db, HttpContext http) =>
+        // Quick access-role change (the inline role dropdown) without touching anything else.
+        members.MapPatch("/{memberId:int}/role", async (int memberId, UpdateMemberRoleDto dto, AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
-            var caller = await db.TeamMemberships.FirstOrDefaultAsync(m => m.TeamId == ctx.TeamId && m.UserId == ctx.UserId);
+            var member = await db.TeamMembers.Include(m => m.Person).FirstOrDefaultAsync(m => m.Id == memberId && m.TeamId == ctx.TeamId);
+            if (member is null) return Results.NotFound();
+
+            if (member.AccessRole == TeamRole.Admin && dto.AccessRole != TeamRole.Admin)
+            {
+                var otherAdmins = await db.TeamMembers.CountAsync(m =>
+                    m.TeamId == ctx.TeamId && m.AccessRole == TeamRole.Admin && m.Id != memberId);
+                if (otherAdmins == 0)
+                    return Results.BadRequest(new { message = "A team needs at least one Admin — promote someone else first." });
+                if (member.IsTeamLead)
+                    return Results.BadRequest(new { message = "Transfer the lead to someone else before demoting this member." });
+                member.IsCoLead = false;
+            }
+
+            member.AccessRole = dto.AccessRole;
+            await db.SaveChangesAsync();
+            return Results.Ok(await BuildDto(db, member, member.Person!));
+        }).RequireTeamAdmin();
+
+        // Transfers the "Lead" label to another Admin on this team. Restricted to
+        // whoever currently holds it.
+        members.MapPatch("/{memberId:int}/lead", async (int memberId, AppDbContext db, HttpContext http) =>
+        {
+            var ctx = http.GetTeamContext();
+            var caller = await db.TeamMembers.FirstOrDefaultAsync(m => m.TeamId == ctx.TeamId && m.Person!.UserId == ctx.UserId);
             if (caller is null || !caller.IsTeamLead)
                 return Results.BadRequest(new { message = "Only the current team lead can transfer the lead." });
 
-            var target = await db.TeamMemberships.FirstOrDefaultAsync(m => m.Id == membershipId && m.TeamId == ctx.TeamId);
+            var target = await db.TeamMembers.Include(m => m.Person).FirstOrDefaultAsync(m => m.Id == memberId && m.TeamId == ctx.TeamId);
             if (target is null) return Results.NotFound();
-            if (target.Status != MembershipStatus.Active)
+            if (target.Status != EmployeeStatus.Active)
                 return Results.BadRequest(new { message = "Only an active member can become the lead." });
 
-            target.Role = TeamRole.Admin;
+            target.AccessRole = TeamRole.Admin;
             target.IsTeamLead = true;
             target.IsCoLead = false;
             caller.IsTeamLead = false;
 
             await db.SaveChangesAsync();
-            return Results.Ok(new MembershipDto(target.Id, target.Email, target.Role, target.Status, target.EmployeeId, target.CreatedAt, target.IsTeamLead, target.IsCoLead));
+            return Results.Ok(await BuildDto(db, target, target.Person!));
         }).RequireTeamAdmin();
 
-        // Sets or clears the "Co-Lead" label — at most one at a time. Restricted to the
-        // current Lead, same reasoning as transferring the lead itself.
-        members.MapPatch("/{membershipId:int}/co-lead", async (int membershipId, SetCoLeadDto dto, AppDbContext db, HttpContext http) =>
+        // Sets or clears the "Co-Lead" label — at most one at a time.
+        members.MapPatch("/{memberId:int}/co-lead", async (int memberId, SetCoLeadDto dto, AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
-            var caller = await db.TeamMemberships.FirstOrDefaultAsync(m => m.TeamId == ctx.TeamId && m.UserId == ctx.UserId);
+            var caller = await db.TeamMembers.FirstOrDefaultAsync(m => m.TeamId == ctx.TeamId && m.Person!.UserId == ctx.UserId);
             if (caller is null || !caller.IsTeamLead)
                 return Results.BadRequest(new { message = "Only the current team lead can assign a co-lead." });
 
-            var target = await db.TeamMemberships.FirstOrDefaultAsync(m => m.Id == membershipId && m.TeamId == ctx.TeamId);
+            var target = await db.TeamMembers.Include(m => m.Person).FirstOrDefaultAsync(m => m.Id == memberId && m.TeamId == ctx.TeamId);
             if (target is null) return Results.NotFound();
 
             if (dto.IsCoLead)
             {
                 if (target.IsTeamLead)
                     return Results.BadRequest(new { message = "The lead can't also be the co-lead." });
-                if (target.Status != MembershipStatus.Active)
+                if (target.Status != EmployeeStatus.Active)
                     return Results.BadRequest(new { message = "Only an active member can become co-lead." });
 
-                var previousCoLead = await db.TeamMemberships
-                    .Where(m => m.TeamId == ctx.TeamId && m.IsCoLead && m.Id != membershipId)
+                var previousCoLead = await db.TeamMembers
+                    .Where(m => m.TeamId == ctx.TeamId && m.IsCoLead && m.Id != memberId)
                     .ToListAsync();
                 foreach (var m in previousCoLead) m.IsCoLead = false;
 
-                target.Role = TeamRole.Admin;
+                target.AccessRole = TeamRole.Admin;
                 target.IsCoLead = true;
             }
             else
@@ -223,48 +387,29 @@ public static class TeamsEndpoints
             }
 
             await db.SaveChangesAsync();
-            return Results.Ok(new MembershipDto(target.Id, target.Email, target.Role, target.Status, target.EmployeeId, target.CreatedAt, target.IsTeamLead, target.IsCoLead));
+            return Results.Ok(await BuildDto(db, target, target.Person!));
         }).RequireTeamAdmin();
 
-        // Links (or unlinks, with employeeId: null) a membership to a roster Employee record,
-        // e.g. "this login is Priya Nair." Purely a convenience for Mobile's My Shifts —
-        // nothing else in the API depends on it.
-        members.MapPatch("/{membershipId:int}/employee", async (int membershipId, LinkEmployeeDto dto, AppDbContext db, HttpContext http) =>
+        // Removes this person from THIS team only — the Person record (and any other
+        // team's TeamMember row for them) is untouched.
+        members.MapDelete("/{memberId:int}", async (int memberId, AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
-            var membership = await db.TeamMemberships.FirstOrDefaultAsync(m => m.Id == membershipId && m.TeamId == ctx.TeamId);
-            if (membership is null) return Results.NotFound();
+            var member = await db.TeamMembers.FirstOrDefaultAsync(m => m.Id == memberId && m.TeamId == ctx.TeamId);
+            if (member is null) return Results.NotFound();
 
-            if (dto.EmployeeId is { } employeeId)
+            if (member.AccessRole == TeamRole.Admin)
             {
-                var employeeExists = await db.Employees.AnyAsync(e => e.Id == employeeId && e.TeamId == ctx.TeamId);
-                if (!employeeExists)
-                    return Results.BadRequest(new { message = "That employee wasn't found on this team." });
-            }
-
-            membership.EmployeeId = dto.EmployeeId;
-            await db.SaveChangesAsync();
-            return Results.Ok(new MembershipDto(membership.Id, membership.Email, membership.Role, membership.Status, membership.EmployeeId, membership.CreatedAt, membership.IsTeamLead, membership.IsCoLead));
-        }).RequireTeamAdmin();
-
-        members.MapDelete("/{membershipId:int}", async (int membershipId, AppDbContext db, HttpContext http) =>
-        {
-            var ctx = http.GetTeamContext();
-            var membership = await db.TeamMemberships.FirstOrDefaultAsync(m => m.Id == membershipId && m.TeamId == ctx.TeamId);
-            if (membership is null) return Results.NotFound();
-
-            if (membership.Role == TeamRole.Admin)
-            {
-                var otherAdmins = await db.TeamMemberships.CountAsync(m =>
-                    m.TeamId == ctx.TeamId && m.Role == TeamRole.Admin && m.Id != membershipId);
+                var otherAdmins = await db.TeamMembers.CountAsync(m =>
+                    m.TeamId == ctx.TeamId && m.AccessRole == TeamRole.Admin && m.Id != memberId);
                 if (otherAdmins == 0)
                     return Results.BadRequest(new { message = "A team needs at least one Admin — promote someone else before removing this one." });
             }
 
-            if (membership.IsTeamLead)
+            if (member.IsTeamLead)
                 return Results.BadRequest(new { message = "Transfer the lead to someone else before removing this member." });
 
-            db.TeamMemberships.Remove(membership);
+            db.TeamMembers.Remove(member);
             await db.SaveChangesAsync();
             return Results.NoContent();
         }).RequireTeamAdmin();
@@ -273,24 +418,26 @@ public static class TeamsEndpoints
 
         var settings = app.MapGroup("/api/teams/current/settings");
 
-        settings.MapGet("", async (AppDbContext db, HttpContext http) =>
-        {
-            var ctx = http.GetTeamContext();
-            var team = await db.Teams.FirstAsync(t => t.Id == ctx.TeamId);
-
-            var activeEmployeeCount = await db.Employees.CountAsync(e => e.TeamId == ctx.TeamId && e.Status == EmployeeStatus.Active);
-            var leadEmail = await db.TeamMemberships.Where(m => m.TeamId == ctx.TeamId && m.IsTeamLead).Select(m => m.Email).FirstOrDefaultAsync();
-            var coLeadEmail = await db.TeamMemberships.Where(m => m.TeamId == ctx.TeamId && m.IsCoLead).Select(m => m.Email).FirstOrDefaultAsync();
-
-            return Results.Ok(new TeamSettingsDto(
-                team.Name, team.OrgName, team.TeamStrength, team.ShiftsCovered,
-                team.DefaultOffDays, team.CompOffsEnabled, activeEmployeeCount, leadEmail, coLeadEmail));
-        }).RequireTeamMember();
+        settings.MapGet("", async (AppDbContext db, HttpContext http) => Results.Ok(await BuildSettingsDto(db, http.GetTeamContext().TeamId)))
+            .RequireTeamMember();
 
         settings.MapPut("", async (UpdateTeamSettingsDto dto, AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
             var team = await db.Teams.FirstAsync(t => t.Id == ctx.TeamId);
+
+            var name = dto.Name.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                return Results.BadRequest(new { message = "Team name is required." });
+
+            if (!string.Equals(name, team.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                var nameTaken = await db.Teams.AnyAsync(t =>
+                    t.Id != team.Id && t.CreatedByUserId == team.CreatedByUserId && t.Name.ToLower() == name.ToLower());
+                if (nameTaken)
+                    return Results.Conflict(new { message = $"You already have a team named '{name}'. Pick a different name." });
+            }
+            team.Name = name;
 
             team.OrgName = string.IsNullOrWhiteSpace(dto.OrgName) ? null : dto.OrgName.Trim();
             team.TeamStrength = dto.TeamStrength;
@@ -299,14 +446,35 @@ public static class TeamsEndpoints
             team.CompOffsEnabled = dto.CompOffsEnabled;
 
             await db.SaveChangesAsync();
-
-            var activeEmployeeCount = await db.Employees.CountAsync(e => e.TeamId == ctx.TeamId && e.Status == EmployeeStatus.Active);
-            var leadEmail = await db.TeamMemberships.Where(m => m.TeamId == ctx.TeamId && m.IsTeamLead).Select(m => m.Email).FirstOrDefaultAsync();
-            var coLeadEmail = await db.TeamMemberships.Where(m => m.TeamId == ctx.TeamId && m.IsCoLead).Select(m => m.Email).FirstOrDefaultAsync();
-
-            return Results.Ok(new TeamSettingsDto(
-                team.Name, team.OrgName, team.TeamStrength, team.ShiftsCovered,
-                team.DefaultOffDays, team.CompOffsEnabled, activeEmployeeCount, leadEmail, coLeadEmail));
+            return Results.Ok(await BuildSettingsDto(db, ctx.TeamId));
         }).RequireTeamAdmin();
     }
+
+    private static TeamMemberDto ToDto(TeamMember m) => new(
+        m.Id, m.PersonId, m.Person!.Name, m.Person.Phone ?? "", m.Person.Email, m.Person.UserId != null,
+        m.Code, m.TrackId, m.Track?.Name, m.SubtrackId, m.Subtrack?.Name,
+        m.RoleTitle, m.Location, m.EmploymentType, m.JoinDate, m.Status, m.Notes, m.AccessRole, m.IsTeamLead, m.IsCoLead, m.CreatedAt);
+
+    private static async Task<TeamMemberDto> BuildDto(AppDbContext db, TeamMember m, Person p)
+    {
+        string? trackName = m.TrackId is { } tid ? await db.Tracks.Where(t => t.Id == tid).Select(t => t.Name).FirstOrDefaultAsync() : null;
+        string? subtrackName = m.SubtrackId is { } sid ? await db.Subtracks.Where(s => s.Id == sid).Select(s => s.Name).FirstOrDefaultAsync() : null;
+        return new TeamMemberDto(
+            m.Id, p.Id, p.Name, p.Phone ?? "", p.Email, p.UserId != null,
+            m.Code, m.TrackId, trackName, m.SubtrackId, subtrackName,
+            m.RoleTitle, m.Location, m.EmploymentType, m.JoinDate, m.Status, m.Notes, m.AccessRole, m.IsTeamLead, m.IsCoLead, m.CreatedAt);
+    }
+
+    private static async Task<TeamSettingsDto> BuildSettingsDto(AppDbContext db, int teamId)
+    {
+        var team = await db.Teams.FirstAsync(t => t.Id == teamId);
+        var activeMemberCount = await db.TeamMembers.CountAsync(m => m.TeamId == teamId && m.Status == EmployeeStatus.Active);
+        var leadName = await db.TeamMembers.Where(m => m.TeamId == teamId && m.IsTeamLead).Select(m => m.Person!.Name).FirstOrDefaultAsync();
+        var coLeadName = await db.TeamMembers.Where(m => m.TeamId == teamId && m.IsCoLead).Select(m => m.Person!.Name).FirstOrDefaultAsync();
+
+        return new TeamSettingsDto(
+            team.Name, team.OrgName, team.TeamStrength, team.ShiftsCovered,
+            team.DefaultOffDays, team.CompOffsEnabled, activeMemberCount, leadName, coLeadName);
+    }
+
 }

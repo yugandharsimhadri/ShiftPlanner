@@ -10,9 +10,9 @@ namespace ShiftPlanner.Api.Endpoints;
 public static class ImportEndpoints
 {
     // Expected columns (header row required):
-    // Name, Phone, Email, Track, Subtrack, Role, EmploymentType, JoinDate, Status, Notes
+    // Name, Phone, Email, Track, Subtrack, Role, Location, EmploymentType, JoinDate, Status, Notes
     private static readonly string[] ExpectedHeaders =
-        { "Name", "Phone", "Email", "Track", "Subtrack", "Role", "EmploymentType", "JoinDate", "Status", "Notes" };
+        { "Name", "Phone", "Email", "Track", "Subtrack", "Role", "Location", "EmploymentType", "JoinDate", "Status", "Notes" };
 
     public static void MapImportEndpoints(this WebApplication app)
     {
@@ -20,7 +20,8 @@ public static class ImportEndpoints
 
         group.MapPost("/employees", async (IFormFile file, AppDbContext db, HttpContext http) =>
         {
-            var teamId = http.GetTeamContext().TeamId;
+            var ctx = http.GetTeamContext();
+            var teamId = ctx.TeamId;
 
             if (file.Length == 0) return Results.BadRequest("Empty file.");
 
@@ -42,7 +43,7 @@ public static class ImportEndpoints
             // Design choice: validate every row first; commit only the rows that pass validation
             // (row-level partial commit), and report the rest as per-row errors.
             var errors = new List<ImportRowError>();
-            var toInsert = new List<Employee>();
+            var toInsert = new List<(Person Person, TeamMember Member)>();
 
             var rowNum = 1; // header is row 1
             foreach (var row in rows)
@@ -109,30 +110,40 @@ public static class ImportEndpoints
                     }
                 }
 
-                toInsert.Add(new Employee
+                var person = new Person
                 {
-                    TeamId = teamId,
                     Name = name,
                     Phone = phone,
                     Email = string.IsNullOrWhiteSpace(row.GetValueOrDefault("Email", "")) ? null : row["Email"].Trim(),
+                    Notes = string.IsNullOrWhiteSpace(row.GetValueOrDefault("Notes", "")) ? null : row["Notes"].Trim(),
+                    CreatedByUserId = ctx.UserId,
+                };
+                var location = row.GetValueOrDefault("Location", "").Trim();
+                var member = new TeamMember
+                {
+                    TeamId = teamId,
                     TrackId = track.Id,
                     SubtrackId = subtrack?.Id,
-                    Role = row.GetValueOrDefault("Role", "").Trim(),
+                    RoleTitle = row.GetValueOrDefault("Role", "").Trim(),
+                    Location = string.IsNullOrWhiteSpace(location) ? null : location,
                     EmploymentType = employmentType,
                     JoinDate = joinDate,
                     Status = status,
-                    Notes = string.IsNullOrWhiteSpace(row.GetValueOrDefault("Notes", "")) ? null : row["Notes"].Trim()
-                });
+                    Notes = person.Notes,
+                };
+                toInsert.Add((person, member));
             }
 
             // Assign sequential codes for the valid rows, continuing after the current max.
-            var nextCodeBase = await EmployeesEndpoints.SuggestNextEmployeeCode(db, teamId);
+            var nextCodeBase = await SuggestNextTeamMemberCode(db, teamId);
             var nextNum = int.Parse(nextCodeBase.Split('-')[1]);
-            foreach (var emp in toInsert)
+            foreach (var (person, member) in toInsert)
             {
-                emp.Code = $"EMP-{nextNum:D3}";
+                member.Code = $"EMP-{nextNum:D3}";
                 nextNum++;
-                db.Employees.Add(emp);
+                db.People.Add(person);
+                member.PersonId = person.Id;
+                db.TeamMembers.Add(member);
             }
 
             if (toInsert.Count > 0)
@@ -140,6 +151,22 @@ public static class ImportEndpoints
 
             return Results.Ok(new ImportResult(toInsert.Count, errors));
         }).RequireTeamEditor().DisableAntiforgery();
+    }
+
+    // Suggests the next sequential code (e.g. "EMP-004") for the new-member form to
+    // pre-fill — the admin can still type over it, since Code is editable.
+    public static async Task<string> SuggestNextTeamMemberCode(AppDbContext db, int teamId)
+    {
+        var codes = await db.TeamMembers.Where(m => m.TeamId == teamId).Select(m => m.Code).ToListAsync();
+
+        var max = 0;
+        foreach (var code in codes)
+        {
+            var parts = code.Split('-');
+            if (parts.Length == 2 && int.TryParse(parts[1], out var n) && n > max)
+                max = n;
+        }
+        return $"EMP-{(max + 1):D3}";
     }
 
     private static List<Dictionary<string, string>> ReadCsv(IFormFile file)

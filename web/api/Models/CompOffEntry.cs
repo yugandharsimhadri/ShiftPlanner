@@ -11,10 +11,10 @@ public class CompOffEntry
     public int Id { get; set; }
     public int TeamId { get; set; }
 
-    public Guid EmployeeId { get; set; }
+    public int TeamMemberId { get; set; }
 
     [JsonIgnore]
-    public Employee? Employee { get; set; }
+    public TeamMember? TeamMember { get; set; }
 
     // The default-off day they actually worked.
     public DateOnly EarnedDate { get; set; }

@@ -10,7 +10,7 @@ namespace ShiftPlanner.Api.Services;
 // Does not call SaveChangesAsync — the caller is expected to save alongside its own changes.
 public static class CompOffAutoEarn
 {
-    public static async Task SyncAsync(AppDbContext db, int teamId, Guid employeeId, DateOnly date, bool isWorkShift)
+    public static async Task SyncAsync(AppDbContext db, int teamId, int teamMemberId, DateOnly date, bool isWorkShift)
     {
         var team = await db.Teams.FirstAsync(t => t.Id == teamId);
         if (!team.CompOffsEnabled) return;
@@ -19,14 +19,14 @@ public static class CompOffAutoEarn
         var shouldEarn = isDefaultOffDay && isWorkShift;
 
         var existingPending = await db.CompOffEntries.FirstOrDefaultAsync(c =>
-            c.TeamId == teamId && c.EmployeeId == employeeId && c.EarnedDate == date && c.Status == CompOffStatus.Pending);
+            c.TeamId == teamId && c.TeamMemberId == teamMemberId && c.EarnedDate == date && c.Status == CompOffStatus.Pending);
 
         if (shouldEarn && existingPending is null)
         {
             db.CompOffEntries.Add(new CompOffEntry
             {
                 TeamId = teamId,
-                EmployeeId = employeeId,
+                TeamMemberId = teamMemberId,
                 EarnedDate = date,
                 Status = CompOffStatus.Pending,
             });

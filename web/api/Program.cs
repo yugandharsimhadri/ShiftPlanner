@@ -81,7 +81,7 @@ app.UseAuthorization();
 app.MapGroup("/api").MapIdentityApi<IdentityUser>();
 
 app.MapTeamsEndpoints();
-app.MapEmployeesEndpoints();
+app.MapAuthEndpoints();
 app.MapTracksEndpoints();
 app.MapSubtracksEndpoints();
 app.MapShiftTypesEndpoints();

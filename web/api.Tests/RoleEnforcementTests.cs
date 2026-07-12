@@ -21,18 +21,18 @@ public class RoleEnforcementTests : IClassFixture<TestWebApplicationFactory>
 
     private static async Task<string> InviteAndLoginAsAsync(HttpClient client, string adminToken, int teamId, string email, string role)
     {
-        var addResult = await client.AddMemberAsync(adminToken, teamId, email, role);
+        var addResult = await client.InviteMemberAsync(adminToken, teamId, email, role);
         addResult.EnsureSuccessStatusCode();
         return await client.RegisterAndLoginAsync(email);
     }
 
     [Fact]
-    public async Task Viewer_cannot_create_an_employee()
+    public async Task Viewer_cannot_create_a_team_member()
     {
         var (client, adminToken, teamId, trackId) = await SetUpTeamAsync("viewer-emp");
         var viewerToken = await InviteAndLoginAsAsync(client, adminToken, teamId, "viewer1@test.local", "Viewer");
 
-        var response = await client.CreateEmployeeAsync(viewerToken, teamId, "EMP-001", "Alice", trackId);
+        var response = await client.CreateTeamMemberAsync(viewerToken, teamId, "EMP-002", "Alice", trackId);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -43,23 +43,22 @@ public class RoleEnforcementTests : IClassFixture<TestWebApplicationFactory>
         var (client, adminToken, teamId, _) = await SetUpTeamAsync("viewer-read");
         var viewerToken = await InviteAndLoginAsAsync(client, adminToken, teamId, "viewer2@test.local", "Viewer");
 
-        var request = new HttpRequestMessage(HttpMethod.Get, "/api/employees").Authorized(viewerToken, teamId);
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/teams/current/members").Authorized(viewerToken, teamId);
         var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
-    public async Task Editor_can_create_an_employee_but_not_manage_members()
+    public async Task Editor_cannot_add_or_manage_team_members()
     {
+        // Team member management (which doubles as access-granting) is Admin-only —
+        // unlike the old split model, Editor no longer gets a lighter "add employees" path.
         var (client, adminToken, teamId, trackId) = await SetUpTeamAsync("editor");
         var editorToken = await InviteAndLoginAsAsync(client, adminToken, teamId, "editor1@test.local", "Editor");
 
-        var createEmployee = await client.CreateEmployeeAsync(editorToken, teamId, "EMP-001", "Alice", trackId);
-        Assert.Equal(HttpStatusCode.Created, createEmployee.StatusCode);
-
-        var addMemberAsEditor = await client.AddMemberAsync(editorToken, teamId, "someone@test.local", "Viewer");
-        Assert.Equal(HttpStatusCode.Forbidden, addMemberAsEditor.StatusCode);
+        var createAttempt = await client.CreateTeamMemberAsync(editorToken, teamId, "EMP-002", "Alice", trackId);
+        Assert.Equal(HttpStatusCode.Forbidden, createAttempt.StatusCode);
     }
 
     [Fact]
@@ -71,20 +70,20 @@ public class RoleEnforcementTests : IClassFixture<TestWebApplicationFactory>
         var members = new HttpRequestMessage(HttpMethod.Get, "/api/teams/current/members").Authorized(adminToken, teamId);
         var membersResponse = await client.SendAsync(members);
         var list = await membersResponse.Content.ReadFromJsonAsync<List<MemberRow>>(ApiTestClient.JsonOptions);
-        var editorMembership = list!.Single(m => m.Email == "editor2@test.local");
+        var editorMember = list!.Single(m => m.Name == "editor2@test.local");
 
         // Editor tries to promote themselves — should fail.
-        var selfPromote = new HttpRequestMessage(HttpMethod.Patch, $"/api/teams/current/members/{editorMembership.Id}")
+        var selfPromote = new HttpRequestMessage(HttpMethod.Patch, $"/api/teams/current/members/{editorMember.Id}/role")
         {
-            Content = JsonContent.Create(new { role = "Admin" }, options: ApiTestClient.JsonOptions)
+            Content = JsonContent.Create(new { accessRole = "Admin" }, options: ApiTestClient.JsonOptions)
         }.Authorized(editorToken, teamId);
         var selfPromoteResponse = await client.SendAsync(selfPromote);
         Assert.Equal(HttpStatusCode.Forbidden, selfPromoteResponse.StatusCode);
 
         // Admin promotes them — should succeed.
-        var adminPromote = new HttpRequestMessage(HttpMethod.Patch, $"/api/teams/current/members/{editorMembership.Id}")
+        var adminPromote = new HttpRequestMessage(HttpMethod.Patch, $"/api/teams/current/members/{editorMember.Id}/role")
         {
-            Content = JsonContent.Create(new { role = "Admin" }, options: ApiTestClient.JsonOptions)
+            Content = JsonContent.Create(new { accessRole = "Admin" }, options: ApiTestClient.JsonOptions)
         }.Authorized(adminToken, teamId);
         var adminPromoteResponse = await client.SendAsync(adminPromote);
         Assert.Equal(HttpStatusCode.OK, adminPromoteResponse.StatusCode);
@@ -98,13 +97,13 @@ public class RoleEnforcementTests : IClassFixture<TestWebApplicationFactory>
         var members = new HttpRequestMessage(HttpMethod.Get, "/api/teams/current/members").Authorized(adminToken, teamId);
         var membersResponse = await client.SendAsync(members);
         var list = await membersResponse.Content.ReadFromJsonAsync<List<MemberRow>>(ApiTestClient.JsonOptions);
-        var selfMembership = list!.Single();
+        var selfMember = list!.Single();
 
-        var removeSelf = new HttpRequestMessage(HttpMethod.Delete, $"/api/teams/current/members/{selfMembership.Id}").Authorized(adminToken, teamId);
+        var removeSelf = new HttpRequestMessage(HttpMethod.Delete, $"/api/teams/current/members/{selfMember.Id}").Authorized(adminToken, teamId);
         var response = await client.SendAsync(removeSelf);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    private sealed record MemberRow(int Id, string Email, string Role, string Status);
+    private sealed record MemberRow(int Id, string Name, string AccessRole, bool IsTeamLead);
 }

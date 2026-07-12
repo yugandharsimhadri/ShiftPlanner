@@ -15,5 +15,5 @@ public class Track
     // Back-reference only, not needed in API output; excluded to avoid duplicate-reference
     // false positives from ReferenceHandler.IgnoreCycles (see Program.cs).
     [JsonIgnore]
-    public List<Employee> Employees { get; set; } = new();
+    public List<TeamMember> TeamMembers { get; set; } = new();
 }

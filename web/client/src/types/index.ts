@@ -2,7 +2,6 @@ export type EmploymentType = 'FullTime' | 'PartTime'
 export type EmployeeStatus = 'Active' | 'Inactive'
 export type RosterEntrySource = 'Manual' | 'Copied'
 export type TeamRole = 'Viewer' | 'Editor' | 'Admin'
-export type MembershipStatus = 'Invited' | 'Active'
 export type CompOffStatus = 'Pending' | 'Used'
 export type DayOfWeekName =
   | 'Sunday'
@@ -48,40 +47,96 @@ export interface Holiday {
   name: string
 }
 
-export interface Employee {
-  id: string
-  code: string
+// --- Team members (one merged concept — access + roster, was Employee + Membership) ---
+
+export interface TeamMember {
+  id: number
+  personId: string
   name: string
   phone: string
   email: string | null
-  trackId: number
-  track: Track | null
+  hasLogin: boolean
+  code: string
+  trackId: number | null
+  trackName: string | null
   subtrackId: number | null
-  subtrack: Subtrack | null
-  role: string
+  subtrackName: string | null
+  roleTitle: string
+  location: string | null
   employmentType: EmploymentType
   joinDate: string
   status: EmployeeStatus
   notes: string | null
+  accessRole: TeamRole
+  isTeamLead: boolean
+  isCoLead: boolean
+  createdAt: string
 }
 
-export interface EmployeeInput {
-  code: string
+export interface CreateTeamMemberInput {
   name: string
   phone: string
   email?: string | null
-  trackId: number
+  notes?: string | null
+  code: string
+  trackId?: number | null
   subtrackId?: number | null
-  role: string
+  roleTitle: string
+  location?: string | null
   employmentType: EmploymentType
   joinDate: string
   status: EmployeeStatus
+  accessRole: TeamRole
+  teamIds: number[]
+}
+
+export interface UpdateTeamMemberInput {
+  name: string
+  phone: string
+  email?: string | null
   notes?: string | null
+  code: string
+  trackId?: number | null
+  subtrackId?: number | null
+  roleTitle: string
+  location?: string | null
+  employmentType: EmploymentType
+  joinDate: string
+  status: EmployeeStatus
+  accessRole: TeamRole
+}
+
+export interface UnassignedPerson {
+  id: string
+  name: string
+  phone: string
+  email: string | null
+}
+
+export interface AssignPersonToTeamInput {
+  personId: string
+  teamId: number
+  code: string
+  trackId?: number | null
+  subtrackId?: number | null
+  roleTitle: string
+  location?: string | null
+  employmentType: EmploymentType
+  joinDate: string
+  accessRole: TeamRole
+}
+
+export interface Me {
+  name: string
+  code: string
+  role: TeamRole
+  isTeamLead: boolean
+  isCoLead: boolean
 }
 
 export interface RosterEntry {
   id: number
-  employeeId: string
+  teamMemberId: number
   date: string
   shiftCode: string | null
   source: RosterEntrySource
@@ -92,7 +147,7 @@ export interface RosterResponse {
   year: number
   month: number
   entries: RosterEntry[]
-  employees: Employee[]
+  teamMembers: TeamMember[]
   tracks: Track[]
   shiftTypes: ShiftType[]
   holidays: Holiday[]
@@ -100,8 +155,8 @@ export interface RosterResponse {
 }
 
 export interface CopyForwardFlag {
-  employeeId: string
-  employeeName: string
+  teamMemberId: number
+  memberName: string
   date: string
   reason: string
 }
@@ -129,26 +184,6 @@ export interface TeamSummary {
   role: TeamRole
 }
 
-export interface Membership {
-  id: number
-  email: string
-  role: TeamRole
-  status: MembershipStatus
-  employeeId: string | null
-  createdAt: string
-  isTeamLead: boolean
-  isCoLead: boolean
-}
-
-export interface Me {
-  email: string
-  role: TeamRole
-  employeeId: string | null
-  employeeCode: string | null
-  isTeamLead: boolean
-  isCoLead: boolean
-}
-
 export interface TeamSettings {
   name: string
   orgName: string | null
@@ -156,12 +191,13 @@ export interface TeamSettings {
   shiftsCovered: string | null
   defaultOffDays: DayOfWeekName[]
   compOffsEnabled: boolean
-  activeEmployeeCount: number
-  leadEmail: string | null
-  coLeadEmail: string | null
+  activeMemberCount: number
+  leadName: string | null
+  coLeadName: string | null
 }
 
 export interface UpdateTeamSettingsInput {
+  name: string
   orgName?: string | null
   teamStrength?: number | null
   shiftsCovered?: string | null
@@ -173,9 +209,9 @@ export interface UpdateTeamSettingsInput {
 
 export interface CompOffEntry {
   id: number
-  employeeId: string
-  employeeCode: string
-  employeeName: string
+  teamMemberId: number
+  memberCode: string
+  memberName: string
   earnedDate: string
   status: CompOffStatus
   usedDate: string | null
@@ -184,9 +220,9 @@ export interface CompOffEntry {
 // --- Reports -------------------------------------------------------------------
 
 export interface UtilizationRow {
-  employeeId: string
-  employeeCode: string
-  employeeName: string
+  teamMemberId: number
+  memberCode: string
+  memberName: string
   trackName: string | null
   totalShiftsWorked: number
   weekendShiftsWorked: number

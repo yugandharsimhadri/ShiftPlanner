@@ -12,7 +12,7 @@ public static class RosterEndpoints
     {
         var group = app.MapGroup("/api/roster").RequireAuthorization();
 
-        // Returns everything the grid needs in one call: entries, employees, tracks, subtracks.
+        // Returns everything the grid needs in one call: entries, team members, tracks, subtracks.
         group.MapGet("", async (int year, int month, AppDbContext db, HttpContext http) =>
         {
             var teamId = http.GetTeamContext().TeamId;
@@ -23,11 +23,12 @@ public static class RosterEndpoints
                 .Where(r => r.TeamId == teamId && r.Date >= start && r.Date <= end)
                 .ToListAsync();
 
-            var employees = await db.Employees
-                .Where(e => e.TeamId == teamId)
-                .Include(e => e.Track)
-                .Include(e => e.Subtrack)
-                .OrderBy(e => e.Name)
+            var teamMembers = await db.TeamMembers
+                .Where(m => m.TeamId == teamId)
+                .Include(m => m.Person)
+                .Include(m => m.Track)
+                .Include(m => m.Subtrack)
+                .OrderBy(m => m.Person!.Name)
                 .ToListAsync();
 
             var tracks = await db.Tracks.Where(t => t.TeamId == teamId).Include(t => t.Subtracks).OrderBy(t => t.Name).ToListAsync();
@@ -40,7 +41,7 @@ public static class RosterEndpoints
                 Year = year,
                 Month = month,
                 Entries = entries,
-                Employees = employees,
+                TeamMembers = teamMembers,
                 Tracks = tracks,
                 ShiftTypes = shiftTypes,
                 Holidays = holidays,
@@ -52,8 +53,8 @@ public static class RosterEndpoints
         {
             var teamId = http.GetTeamContext().TeamId;
 
-            var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == dto.EmployeeId && e.TeamId == teamId);
-            if (employee is null) return Results.NotFound($"Employee '{dto.EmployeeId}' not found.");
+            var member = await db.TeamMembers.FirstOrDefaultAsync(m => m.Id == dto.TeamMemberId && m.TeamId == teamId);
+            if (member is null) return Results.NotFound($"Team member '{dto.TeamMemberId}' not found.");
 
             var shiftType = dto.ShiftCode is null
                 ? null
@@ -62,14 +63,14 @@ public static class RosterEndpoints
                 return Results.BadRequest($"Shift type '{dto.ShiftCode}' not found.");
 
             var entry = await db.RosterEntries
-                .FirstOrDefaultAsync(r => r.EmployeeId == dto.EmployeeId && r.Date == dto.Date);
+                .FirstOrDefaultAsync(r => r.TeamMemberId == dto.TeamMemberId && r.Date == dto.Date);
 
             if (entry is null)
             {
                 entry = new RosterEntry
                 {
                     TeamId = teamId,
-                    EmployeeId = dto.EmployeeId,
+                    TeamMemberId = dto.TeamMemberId,
                     Date = dto.Date,
                     ShiftCode = dto.ShiftCode,
                     Source = RosterEntrySource.Manual,
@@ -84,7 +85,7 @@ public static class RosterEndpoints
                 entry.Note = dto.Note;
             }
 
-            await CompOffAutoEarn.SyncAsync(db, teamId, dto.EmployeeId, dto.Date, shiftType?.IsWorkShift == true);
+            await CompOffAutoEarn.SyncAsync(db, teamId, dto.TeamMemberId, dto.Date, shiftType?.IsWorkShift == true);
 
             await db.SaveChangesAsync();
             return Results.Ok(entry);
@@ -103,7 +104,7 @@ public static class RosterEndpoints
                 .Where(r => r.TeamId == teamId && r.Date >= sourceStart && r.Date <= sourceEnd)
                 .ToListAsync();
 
-            var employees = await db.Employees.Where(e => e.TeamId == teamId).ToDictionaryAsync(e => e.Id);
+            var members = await db.TeamMembers.Where(m => m.TeamId == teamId).Include(m => m.Person).ToDictionaryAsync(m => m.Id);
             var holidays = (await db.Holidays
                 .Where(h => h.TeamId == teamId && h.Date >= targetStart && h.Date <= targetEnd)
                 .ToListAsync())
@@ -124,29 +125,29 @@ public static class RosterEndpoints
                 if (targetDate is null || targetDate < targetStart || targetDate > targetEnd)
                     continue; // no valid corresponding date this month (e.g. 5th Monday doesn't exist)
 
-                if (!employees.TryGetValue(src.EmployeeId, out var employee))
-                    continue; // employee no longer exists
+                if (!members.TryGetValue(src.TeamMemberId, out var member))
+                    continue; // team member no longer on this team
 
                 var reasons = new List<string>();
 
-                if (employee.Status == EmployeeStatus.Inactive)
+                if (member.Status == EmployeeStatus.Inactive)
                 {
                     if (req.SkipInactive) continue;
-                    reasons.Add("inactive-employee");
+                    reasons.Add("inactive-member");
                 }
 
                 if (holidays.Contains(targetDate.Value))
                     reasons.Add("holiday");
 
                 var existing = await db.RosterEntries
-                    .FirstOrDefaultAsync(r => r.EmployeeId == src.EmployeeId && r.Date == targetDate.Value);
+                    .FirstOrDefaultAsync(r => r.TeamMemberId == src.TeamMemberId && r.Date == targetDate.Value);
 
                 if (existing is null)
                 {
                     db.RosterEntries.Add(new RosterEntry
                     {
                         TeamId = teamId,
-                        EmployeeId = src.EmployeeId,
+                        TeamMemberId = src.TeamMemberId,
                         Date = targetDate.Value,
                         ShiftCode = src.ShiftCode,
                         Source = RosterEntrySource.Copied,
@@ -161,12 +162,12 @@ public static class RosterEndpoints
                 }
 
                 var isWorkShift = src.ShiftCode is not null && workShiftCodeSet.Contains(src.ShiftCode);
-                await CompOffAutoEarn.SyncAsync(db, teamId, src.EmployeeId, targetDate.Value, isWorkShift);
+                await CompOffAutoEarn.SyncAsync(db, teamId, src.TeamMemberId, targetDate.Value, isWorkShift);
 
                 copiedCount++;
 
                 foreach (var reason in reasons)
-                    flagged.Add(new CopyForwardFlag(employee.Id, employee.Name, targetDate.Value, reason));
+                    flagged.Add(new CopyForwardFlag(member.Id, member.Person!.Name, targetDate.Value, reason));
             }
 
             await db.SaveChangesAsync();

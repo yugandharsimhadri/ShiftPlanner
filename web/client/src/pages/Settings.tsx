@@ -34,6 +34,7 @@ function TeamSettingsSection() {
   const queryClient = useQueryClient()
   const { data: settings } = useQuery({ queryKey: ['team-settings'], queryFn: getTeamSettings })
 
+  const [name, setName] = useState('')
   const [orgName, setOrgName] = useState('')
   const [teamStrength, setTeamStrength] = useState('')
   const [shiftsCovered, setShiftsCovered] = useState('')
@@ -42,6 +43,7 @@ function TeamSettingsSection() {
 
   useEffect(() => {
     if (!settings) return
+    setName(settings.name)
     setOrgName(settings.orgName ?? '')
     setTeamStrength(settings.teamStrength?.toString() ?? '')
     setShiftsCovered(settings.shiftsCovered ?? '')
@@ -51,7 +53,10 @@ function TeamSettingsSection() {
 
   const saveMutation = useMutation({
     mutationFn: updateTeamSettings,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['team-settings'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team-settings'] })
+      queryClient.invalidateQueries({ queryKey: ['teams', 'mine'] })
+    },
   })
 
   const toggleDay = (day: DayOfWeekName) => {
@@ -61,6 +66,7 @@ function TeamSettingsSection() {
 
   const save = () =>
     saveMutation.mutate({
+      name: name.trim(),
       orgName: orgName.trim() || null,
       teamStrength: teamStrength.trim() ? Number(teamStrength) : null,
       shiftsCovered: shiftsCovered.trim() || null,
@@ -72,15 +78,19 @@ function TeamSettingsSection() {
 
   return (
     <section className="card settings-section">
-      <h2>Team settings — {settings.name}</h2>
+      <h2>Team settings</h2>
 
       <div className="settings-readout">
-        <span>Employees: <b>{settings.activeEmployeeCount}</b>{settings.teamStrength ? ` of ${settings.teamStrength} budgeted` : ''}</span>
-        <span>Lead: <b>{settings.leadEmail ?? '—'}</b></span>
-        <span>Co-lead: <b>{settings.coLeadEmail ?? 'none'}</b></span>
+        <span>Team members: <b>{settings.activeMemberCount}</b>{settings.teamStrength ? ` of ${settings.teamStrength} budgeted` : ''}</span>
+        <span>Lead: <b>{settings.leadName ?? '—'}</b></span>
+        <span>Co-lead: <b>{settings.coLeadName ?? 'none'}</b></span>
       </div>
 
       <div className="settings-field-grid">
+        <div className="settings-field">
+          <label htmlFor="team-name">Team name</label>
+          <input id="team-name" value={name} onChange={(e) => setName(e.target.value)} readOnly={!isAdmin} placeholder="e.g. Store 42 Ops" />
+        </div>
         <div className="settings-field">
           <label htmlFor="org-name">Organization name</label>
           <input id="org-name" value={orgName} onChange={(e) => setOrgName(e.target.value)} readOnly={!isAdmin} placeholder="e.g. Acme Retail" />
@@ -137,9 +147,12 @@ function TeamSettingsSection() {
       </label>
 
       {isAdmin && (
-        <button className="btn" onClick={save} disabled={saveMutation.isPending}>
-          {saveMutation.isPending ? 'Saving…' : 'Save team settings'}
-        </button>
+        <>
+          <button className="btn" onClick={save} disabled={!name.trim() || saveMutation.isPending}>
+            {saveMutation.isPending ? 'Saving…' : 'Save team settings'}
+          </button>
+          {saveMutation.isError && <p className="error-text">Could not save — that team name may already be in use.</p>}
+        </>
       )}
     </section>
   )

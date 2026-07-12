@@ -57,10 +57,10 @@ export default function ImportExportPanel({ year, month, canImport, onClose }: P
         {canImport && (
           <section>
             <h3 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--ink-soft)', marginBottom: 10 }}>
-              Import employees (.csv or .xlsx)
+              Import team members (.csv or .xlsx)
             </h3>
             <p style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 0 }}>
-              Columns: Name, Phone, Email, Track, Subtrack, Role, EmploymentType, JoinDate, Status, Notes
+              Columns: Name, Phone, Email, Track, Subtrack, Role, Location, EmploymentType, JoinDate, Status, Notes
             </p>
             <input
               ref={fileInputRef}
@@ -77,7 +77,7 @@ export default function ImportExportPanel({ year, month, canImport, onClose }: P
             {importResult && (
               <div style={{ marginTop: 16 }}>
                 <p>
-                  Imported <strong>{importResult.imported}</strong> employee{importResult.imported === 1 ? '' : 's'}.
+                  Imported <strong>{importResult.imported}</strong> team member{importResult.imported === 1 ? '' : 's'}.
                 </p>
                 {importResult.errors.length > 0 && (
                   <>

@@ -11,11 +11,11 @@ public class CopyForwardTests : IClassFixture<TestWebApplicationFactory>
 
     public CopyForwardTests(TestWebApplicationFactory factory) => _factory = factory;
 
-    private static async Task SetShiftAsync(HttpClient client, string token, int teamId, Guid employeeId, DateOnly date, string? code)
+    private static async Task SetShiftAsync(HttpClient client, string token, int teamId, int teamMemberId, DateOnly date, string? code)
     {
         var request = new HttpRequestMessage(HttpMethod.Put, "/api/roster/entry")
         {
-            Content = JsonContent.Create(new RosterEntryUpsertDto(employeeId, date, code, null), options: JsonOptions)
+            Content = JsonContent.Create(new RosterEntryUpsertDto(teamMemberId, date, code, null), options: JsonOptions)
         }.Authorized(token, teamId);
         var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();
@@ -29,8 +29,8 @@ public class CopyForwardTests : IClassFixture<TestWebApplicationFactory>
         var team = await client.CreateTeamAsync(token, "Copy Team 1");
         var track = await client.CreateTrackAsync(token, team.Id, "Ops");
 
-        var createEmp = await client.CreateEmployeeAsync(token, team.Id, "EMP-001", "Alice", track.Id);
-        var employee = await createEmp.Content.ReadFromJsonAsync<ShiftPlanner.Api.Models.Employee>(JsonOptions);
+        var createMember = await client.CreateTeamMemberAsync(token, team.Id, "EMP-002", "Alice", track.Id);
+        var member = await createMember.Content.ReadFromJsonAsync<TeamMemberDto>(JsonOptions);
 
         var shiftTypeRequest = new HttpRequestMessage(HttpMethod.Post, "/api/shift-types")
         {
@@ -40,7 +40,7 @@ public class CopyForwardTests : IClassFixture<TestWebApplicationFactory>
 
         // 2nd Thursday of Jan 2026 is Jan 8.
         var sourceDate = new DateOnly(2026, 1, 8);
-        await SetShiftAsync(client, token, team.Id, employee!.Id, sourceDate, "M");
+        await SetShiftAsync(client, token, team.Id, member!.Id, sourceDate, "M");
 
         var copyRequest = new HttpRequestMessage(HttpMethod.Post, "/api/roster/copy-forward")
         {
@@ -55,14 +55,14 @@ public class CopyForwardTests : IClassFixture<TestWebApplicationFactory>
         var rosterResponse = await client.SendAsync(rosterRequest);
         var roster = await rosterResponse.Content.ReadFromJsonAsync<RosterResponseShape>(JsonOptions);
 
-        var copiedEntry = roster!.Entries.SingleOrDefault(e => e.EmployeeId == employee.Id && e.Date == new DateOnly(2026, 2, 12));
+        var copiedEntry = roster!.Entries.SingleOrDefault(e => e.TeamMemberId == member.Id && e.Date == new DateOnly(2026, 2, 12));
         Assert.NotNull(copiedEntry);
         Assert.Equal("M", copiedEntry!.ShiftCode);
         Assert.True(result!.CopiedCount >= 1);
     }
 
     [Fact]
-    public async Task Inactive_employees_are_skipped_when_requested()
+    public async Task Inactive_team_members_are_skipped_when_requested()
     {
         var client = _factory.CreateClient();
         var token = await client.RegisterAndLoginAsync("copyfwd2@test.local");
@@ -75,15 +75,15 @@ public class CopyForwardTests : IClassFixture<TestWebApplicationFactory>
         }.Authorized(token, team.Id);
         await client.SendAsync(shiftTypeRequest);
 
-        var createEmp = await client.CreateEmployeeAsync(token, team.Id, "EMP-001", "Alice", track.Id);
-        var employee = await createEmp.Content.ReadFromJsonAsync<ShiftPlanner.Api.Models.Employee>(JsonOptions);
-        await SetShiftAsync(client, token, team.Id, employee!.Id, new DateOnly(2026, 3, 2), "M");
+        var createMember = await client.CreateTeamMemberAsync(token, team.Id, "EMP-002", "Alice", track.Id);
+        var member = await createMember.Content.ReadFromJsonAsync<TeamMemberDto>(JsonOptions);
+        await SetShiftAsync(client, token, team.Id, member!.Id, new DateOnly(2026, 3, 2), "M");
 
         // Deactivate.
-        var deactivateDto = new EmployeeDto("EMP-001", "Alice", "555-0100", null, track.Id, null, "Clerk",
-            ShiftPlanner.Api.Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today),
-            ShiftPlanner.Api.Models.EmployeeStatus.Inactive, null);
-        var deactivateRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/employees/{employee.Id}")
+        var deactivateDto = new UpdateTeamMemberDto("Alice", "555-0100", null, null, "EMP-002", track.Id, null, "Clerk", null,
+            Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today),
+            Models.EmployeeStatus.Inactive, Models.TeamRole.Viewer);
+        var deactivateRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/teams/current/members/{member.Id}")
         {
             Content = JsonContent.Create(deactivateDto, options: JsonOptions)
         }.Authorized(token, team.Id);
@@ -100,5 +100,5 @@ public class CopyForwardTests : IClassFixture<TestWebApplicationFactory>
     }
 
     private sealed record RosterResponseShape(List<RosterEntryShape> Entries);
-    private sealed record RosterEntryShape(Guid EmployeeId, DateOnly Date, string? ShiftCode);
+    private sealed record RosterEntryShape(int TeamMemberId, DateOnly Date, string? ShiftCode);
 }

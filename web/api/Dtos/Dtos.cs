@@ -2,20 +2,6 @@ using ShiftPlanner.Api.Models;
 
 namespace ShiftPlanner.Api.Dtos;
 
-public record EmployeeDto(
-    string Code,
-    string Name,
-    string Phone,
-    string? Email,
-    int TrackId,
-    int? SubtrackId,
-    string Role,
-    EmploymentType EmploymentType,
-    DateOnly JoinDate,
-    EmployeeStatus Status,
-    string? Notes
-);
-
 public record TrackDto(int? Id, string Name, string? LeadName, string Color);
 
 public record SubtrackDto(int? Id, int TrackId, string Name);
@@ -24,7 +10,7 @@ public record ShiftTypeDto(int? Id, string Code, string Name, TimeOnly? Start, T
 
 public record HolidayDto(int? Id, DateOnly Date, string Name);
 
-public record RosterEntryUpsertDto(Guid EmployeeId, DateOnly Date, string? ShiftCode, string? Note);
+public record RosterEntryUpsertDto(int TeamMemberId, DateOnly Date, string? ShiftCode, string? Note);
 
 public record CopyForwardRequest(
     int SourceYear,
@@ -35,7 +21,7 @@ public record CopyForwardRequest(
     bool SkipInactive
 );
 
-public record CopyForwardFlag(Guid EmployeeId, string EmployeeName, DateOnly Date, string Reason);
+public record CopyForwardFlag(int TeamMemberId, string MemberName, DateOnly Date, string Reason);
 
 public record CopyForwardResult(int CopiedCount, List<CopyForwardFlag> Flagged);
 
@@ -49,24 +35,89 @@ public record CreateTeamDto(string Name);
 
 public record TeamSummaryDto(int Id, string Name, TeamRole Role);
 
-public record AddMemberDto(string Email, TeamRole Role);
+// --- Team members (merged Employee + TeamMembership) ------------------------
 
-public record UpdateMemberRoleDto(TeamRole Role);
-
-public record MembershipDto(
+public record TeamMemberDto(
     int Id,
-    string Email,
-    TeamRole Role,
-    MembershipStatus Status,
-    Guid? EmployeeId,
-    DateTimeOffset CreatedAt,
+    Guid PersonId,
+    string Name,
+    string Phone,
+    string? Email,
+    bool HasLogin,
+    string Code,
+    int? TrackId,
+    string? TrackName,
+    int? SubtrackId,
+    string? SubtrackName,
+    string RoleTitle,
+    string? Location,
+    EmploymentType EmploymentType,
+    DateOnly JoinDate,
+    EmployeeStatus Status,
+    string? Notes,
+    TeamRole AccessRole,
     bool IsTeamLead,
-    bool IsCoLead
+    bool IsCoLead,
+    DateTimeOffset CreatedAt
 );
 
-public record LinkEmployeeDto(Guid? EmployeeId);
+// Creates a new Person plus one TeamMember row per team in TeamIds — TeamIds may be
+// empty, leaving the person recorded but not yet assigned to any team's roster.
+public record CreateTeamMemberDto(
+    string Name,
+    string Phone,
+    string? Email,
+    string? Notes,
+    string Code,
+    int? TrackId,
+    int? SubtrackId,
+    string RoleTitle,
+    string? Location,
+    EmploymentType EmploymentType,
+    DateOnly JoinDate,
+    EmployeeStatus Status,
+    TeamRole AccessRole,
+    List<int> TeamIds
+);
 
-public record MeDto(string Email, TeamRole Role, Guid? EmployeeId, string? EmployeeCode, bool IsTeamLead, bool IsCoLead);
+public record UpdateTeamMemberDto(
+    string Name,
+    string Phone,
+    string? Email,
+    string? Notes,
+    string Code,
+    int? TrackId,
+    int? SubtrackId,
+    string RoleTitle,
+    string? Location,
+    EmploymentType EmploymentType,
+    DateOnly JoinDate,
+    EmployeeStatus Status,
+    TeamRole AccessRole
+);
+
+// Adds an existing (already-known-to-you) Person to another team you manage.
+public record AssignPersonToTeamDto(
+    Guid PersonId,
+    int TeamId,
+    string Code,
+    int? TrackId,
+    int? SubtrackId,
+    string RoleTitle,
+    string? Location,
+    EmploymentType EmploymentType,
+    DateOnly JoinDate,
+    TeamRole AccessRole
+);
+
+public record UnassignedPersonDto(Guid Id, string Name, string Phone, string? Email);
+
+public record UpdateMemberRoleDto(TeamRole AccessRole);
+
+public record SetCoLeadDto(bool IsCoLead);
+
+// The caller's own TeamMember record on the current team.
+public record MeDto(string Name, string Code, TeamRole Role, bool IsTeamLead, bool IsCoLead);
 
 public record TeamSettingsDto(
     string Name,
@@ -75,12 +126,13 @@ public record TeamSettingsDto(
     string? ShiftsCovered,
     List<DayOfWeek> DefaultOffDays,
     bool CompOffsEnabled,
-    int ActiveEmployeeCount,
-    string? LeadEmail,
-    string? CoLeadEmail
+    int ActiveMemberCount,
+    string? LeadName,
+    string? CoLeadName
 );
 
 public record UpdateTeamSettingsDto(
+    string Name,
     string? OrgName,
     int? TeamStrength,
     string? ShiftsCovered,
@@ -88,15 +140,22 @@ public record UpdateTeamSettingsDto(
     bool CompOffsEnabled
 );
 
-public record SetCoLeadDto(bool IsCoLead);
+// --- Auth ------------------------------------------------------------------
+
+// Either Email or Phone (or both) must be set — whichever is given can later be used
+// to log in. Doesn't replace the built-in /api/register (still email+password only,
+// still used by Mobile); this is the newer email-or-phone flow used by Web.
+public record RegisterAccountDto(string? Email, string? Phone, string Password);
+
+public record LoginPhoneDto(string Phone, string Password);
 
 // --- Comp-offs ---------------------------------------------------------------
 
 public record CompOffEntryDto(
     int Id,
-    Guid EmployeeId,
-    string EmployeeCode,
-    string EmployeeName,
+    int TeamMemberId,
+    string MemberCode,
+    string MemberName,
     DateOnly EarnedDate,
     CompOffStatus Status,
     DateOnly? UsedDate
@@ -107,9 +166,9 @@ public record UseCompOffDto(DateOnly UsedDate);
 // --- Reports -------------------------------------------------------------------
 
 public record UtilizationRowDto(
-    Guid EmployeeId,
-    string EmployeeCode,
-    string EmployeeName,
+    int TeamMemberId,
+    string MemberCode,
+    string MemberName,
     string? TrackName,
     int TotalShiftsWorked,
     int WeekendShiftsWorked,

@@ -7,7 +7,7 @@ import ShiftPopup from '../components/ShiftPopup'
 import CopyMonthModal from '../components/CopyMonthModal'
 import ImportExportPanel from '../components/ImportExportPanel'
 import { useTeam } from '../team/TeamContext'
-import type { Employee, RosterEntry } from '../types'
+import type { RosterEntry, TeamMember } from '../types'
 import './Roster.css'
 
 const TODAY = new Date()
@@ -17,7 +17,7 @@ export default function Roster() {
   const canEdit = currentRole === 'Editor' || currentRole === 'Admin'
   const [year, setYear] = useState(TODAY.getFullYear())
   const [month, setMonth] = useState(TODAY.getMonth() + 1)
-  const [popup, setPopup] = useState<{ employeeId: string; date: string; x: number; y: number } | null>(null)
+  const [popup, setPopup] = useState<{ teamMemberId: number; date: string; x: number; y: number } | null>(null)
   const [copyOpen, setCopyOpen] = useState(false)
   const [importExportOpen, setImportExportOpen] = useState(false)
 
@@ -38,8 +38,8 @@ export default function Roster() {
   })
 
   const { data: pendingCompOffs } = useQuery({
-    queryKey: ['compoffs', 'pending', popup?.employeeId],
-    queryFn: () => getCompOffs('Pending', popup!.employeeId),
+    queryKey: ['compoffs', 'pending', popup?.teamMemberId],
+    queryFn: () => getCompOffs('Pending', popup!.teamMemberId),
     enabled: !!popup && canEdit,
   })
 
@@ -59,7 +59,7 @@ export default function Roster() {
   const entriesMap = useMemo(() => {
     const map = new Map<string, RosterEntry>()
     for (const entry of data?.entries ?? []) {
-      map.set(`${entry.employeeId}|${entry.date}`, entry)
+      map.set(`${entry.teamMemberId}|${entry.date}`, entry)
     }
     return map
   }, [data])
@@ -71,15 +71,24 @@ export default function Roster() {
 
   const holidaySet = useMemo(() => new Set((data?.holidays ?? []).map((h) => h.date)), [data])
 
-  const employeesByTrack = useMemo(() => {
-    const map = new Map<number, Employee[]>()
-    for (const emp of data?.employees ?? []) {
-      const list = map.get(emp.trackId) ?? []
-      list.push(emp)
-      map.set(emp.trackId, list)
+  const membersByTrack = useMemo(() => {
+    const map = new Map<number, TeamMember[]>()
+    for (const member of data?.teamMembers ?? []) {
+      if (member.trackId === null) continue
+      const list = map.get(member.trackId) ?? []
+      list.push(member)
+      map.set(member.trackId, list)
     }
     return map
   }, [data])
+
+  // A track is optional on a team member now (it wasn't before the Team Members merge) —
+  // without this, anyone added without a track would silently vanish from the roster
+  // instead of showing up somewhere editable.
+  const unassignedMembers = useMemo(
+    () => (data?.teamMembers ?? []).filter((m) => m.trackId === null),
+    [data]
+  )
 
   function goMonth(delta: number) {
     const next = addMonths(year, month, delta)
@@ -87,15 +96,15 @@ export default function Roster() {
     setMonth(next.month)
   }
 
-  function handleCellClick(employeeId: string, date: string, el: HTMLElement) {
+  function handleCellClick(teamMemberId: number, date: string, el: HTMLElement) {
     if (!canEdit) return
     const rect = el.getBoundingClientRect()
-    setPopup({ employeeId, date, x: rect.left, y: rect.bottom + 6 })
+    setPopup({ teamMemberId, date, x: rect.left, y: rect.bottom + 6 })
   }
 
   function handleSelectShift(code: string | null) {
     if (!popup) return
-    upsertMutation.mutate({ employeeId: popup.employeeId, date: popup.date, shiftCode: code })
+    upsertMutation.mutate({ teamMemberId: popup.teamMemberId, date: popup.date, shiftCode: code })
     setPopup(null)
   }
 
@@ -128,18 +137,18 @@ export default function Roster() {
       {data && (
         <div className="track-sections">
           {data.tracks.map((track) => {
-            const employees = employeesByTrack.get(track.id) ?? []
-            if (employees.length === 0) return null
+            const members = membersByTrack.get(track.id) ?? []
+            if (members.length === 0) return null
             return (
               <section key={track.id} className="track-section">
                 <div className="track-heading">
                   <span className="pill-dot" style={{ background: track.color }} />
                   <h3>{track.name}</h3>
                   {track.leadName && <span className="track-lead">Lead: {track.leadName}</span>}
-                  <span className="track-count mono">{employees.length}</span>
+                  <span className="track-count mono">{members.length}</span>
                 </div>
                 <RosterTable
-                  employees={employees}
+                  members={members}
                   year={year}
                   month={month}
                   days={days}
@@ -153,6 +162,34 @@ export default function Roster() {
               </section>
             )
           })}
+
+          {unassignedMembers.length > 0 && (
+            <section className="track-section">
+              <div className="track-heading">
+                <span className="pill-dot" style={{ background: 'var(--ink-faint)' }} />
+                <h3>Unassigned</h3>
+                <span className="track-count mono">{unassignedMembers.length}</span>
+              </div>
+              <RosterTable
+                members={unassignedMembers}
+                year={year}
+                month={month}
+                days={days}
+                entriesMap={entriesMap}
+                shiftTypesByCode={shiftTypesByCode}
+                holidaySet={holidaySet}
+                offDays={data.defaultOffDays}
+                onCellClick={handleCellClick}
+                canEdit={canEdit}
+              />
+            </section>
+          )}
+
+          {data.teamMembers.length === 0 && (
+            <div className="empty-state">
+              No team members yet — add one from the Team Members tab.
+            </div>
+          )}
         </div>
       )}
 
@@ -161,7 +198,7 @@ export default function Roster() {
           x={popup.x}
           y={popup.y}
           shiftTypes={data.shiftTypes}
-          currentCode={entriesMap.get(`${popup.employeeId}|${popup.date}`)?.shiftCode ?? null}
+          currentCode={entriesMap.get(`${popup.teamMemberId}|${popup.date}`)?.shiftCode ?? null}
           onSelect={handleSelectShift}
           onClose={() => setPopup(null)}
           pendingCompOffs={pendingCompOffs ?? []}
