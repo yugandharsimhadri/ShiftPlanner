@@ -1,0 +1,83 @@
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+}
+
+.login-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(480px 380px at 18% 20%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
+    radial-gradient(420px 340px at 84% 78%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 70%);
+}
+
+.login-card {
+  position: relative;
+  width: 380px;
+  max-width: 92vw;
+  padding: 36px 34px;
+  box-shadow: var(--shadow-lg);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.login-brand .app-brand-mark {
+  width: 26px;
+  height: 26px;
+}
+
+.login-brand h1 {
+  font-size: 21px;
+}
+
+.login-sub {
+  color: var(--ink-soft);
+  font-size: 13.5px;
+  margin: 0 0 22px;
+}
+
+.login-tabs {
+  display: flex;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  margin-bottom: 20px;
+}
+
+.login-tabs button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 0;
+  border-radius: 6px;
+  transition: background-color 150ms var(--ease), color 150ms var(--ease), box-shadow 150ms var(--ease);
+}
+
+.login-tabs button.active {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.login-submit {
+  width: 100%;
+  padding: 11px;
+  margin-top: 8px;
+  font-size: 14px;
+}

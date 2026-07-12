@@ -1,0 +1,136 @@
+<Window x:Class="ShiftPlanner.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:ShiftPlanner.Desktop.ViewModels"
+        Title="ShiftPlanner" Height="720" Width="1180" MinWidth="860" MinHeight="480"
+        WindowStartupLocation="CenterScreen">
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title bar -->
+        <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="20,14">
+            <TextBlock Text="ShiftPlanner" FontFamily="{StaticResource DisplayFont}" FontSize="20" FontWeight="Bold"/>
+        </Border>
+
+        <!-- Toolbar -->
+        <Border Grid.Row="1" Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="16,10">
+            <DockPanel LastChildFill="True">
+
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left">
+                    <Button Content="&#8249;" Width="30" Height="30" Padding="0" FontSize="15" FontWeight="SemiBold"
+                            Style="{StaticResource ToolbarButton}" Command="{Binding PrevMonthCommand}" Margin="0,0,4,0"/>
+                    <TextBlock Text="{Binding MonthLabel}" FontFamily="{StaticResource MonoFont}" FontSize="14" FontWeight="SemiBold" Width="80"
+                               TextAlignment="Center" VerticalAlignment="Center"/>
+                    <Button Content="&#8250;" Width="30" Height="30" Padding="0" FontSize="15" FontWeight="SemiBold"
+                            Style="{StaticResource ToolbarButton}" Command="{Binding NextMonthCommand}" Margin="4,0,16,0"/>
+
+                    <ComboBox Width="140" Height="30" ItemsSource="{Binding TrackFilterOptions}" DisplayMemberPath="Name"
+                              SelectedItem="{Binding SelectedTrackFilter}" Margin="0,0,10,0"/>
+                    <TextBox Width="170" Height="30" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                              Padding="8,0" Margin="0" VerticalContentAlignment="Center" VerticalAlignment="Center"
+                              BorderBrush="{StaticResource LineStrongBrush}" Background="{StaticResource SurfaceBrush}"
+                              Tag="Search employee…"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Import / Export" Style="{StaticResource ToolbarButton}" Command="{Binding ExportImportCommand}"/>
+                    <Button Content="Shift Types" Style="{StaticResource ToolbarButton}" Command="{Binding ManageShiftTypesCommand}"/>
+                    <Button Content="Tracks" Style="{StaticResource ToolbarButton}" Command="{Binding ManageTracksCommand}"/>
+                    <Button Content="Copy Previous Month" Style="{StaticResource ToolbarButton}" Command="{Binding CopyPreviousMonthCommand}"/>
+                    <Button Content="+ Add Employee" Style="{StaticResource PrimaryButton}" Margin="0" Command="{Binding AddEmployeeCommand}"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Roster grid -->
+        <DataGrid x:Name="RosterGrid" Grid.Row="2"
+                  ItemsSource="{Binding RowsView}"
+                  AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                  CanUserResizeRows="False" CanUserReorderColumns="False" CanUserSortColumns="False"
+                  HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                  RowHeaderWidth="0" FrozenColumnCount="1" RowHeight="42"
+                  HorizontalGridLinesBrush="{StaticResource LineBrush}"
+                  Background="{StaticResource SurfaceBrush}" BorderThickness="0">
+            <DataGrid.Resources>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="{StaticResource Surface2Brush}"/>
+                    <Setter Property="Padding" Value="8,10"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource LineStrongBrush}"/>
+                    <Setter Property="BorderThickness" Value="0,0,0,2"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                </Style>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+                </Style>
+                <Style TargetType="DataGridCell">
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{StaticResource InkBrush}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.Resources>
+
+            <DataGrid.GroupStyle>
+                <GroupStyle>
+                    <GroupStyle.HeaderTemplate>
+                        <DataTemplate>
+                            <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource LineStrongBrush}" BorderThickness="0,0,0,1" Padding="12,6">
+                                <TextBlock Text="{Binding Name}" FontFamily="{StaticResource MonoFont}" FontSize="11"
+                                           FontWeight="Bold" Foreground="{StaticResource InkSoftBrush}"
+                                           TextAlignment="Left"/>
+                            </Border>
+                        </DataTemplate>
+                    </GroupStyle.HeaderTemplate>
+                </GroupStyle>
+            </DataGrid.GroupStyle>
+
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Employee" Width="190" CanUserResize="False">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel VerticalAlignment="Center" Margin="12,0">
+                                <TextBlock Text="{Binding Name}" FontSize="13.5" FontWeight="SemiBold" Cursor="Hand">
+                                    <TextBlock.InputBindings>
+                                        <MouseBinding MouseAction="LeftClick"
+                                                      Command="{Binding DataContext.EditEmployeeCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                      CommandParameter="{Binding Employee}"/>
+                                    </TextBlock.InputBindings>
+                                </TextBlock>
+                                <TextBlock Text="{Binding MetaLine}" FontFamily="{StaticResource MonoFont}" FontSize="10.5" Foreground="{StaticResource InkFaintBrush}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <!-- Legend -->
+        <Border Grid.Row="3" Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="16,8">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                    <TextBlock Text="M Morning" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="#A8701F" Margin="0,0,14,0"/>
+                    <TextBlock Text="E Evening" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="#4453AD" Margin="0,0,14,0"/>
+                    <TextBlock Text="N Night" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="#22314F" Margin="0,0,14,0"/>
+                    <TextBlock Text="OFF Off" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="#6E7D78" Margin="0,0,14,0"/>
+                    <TextBlock Text="LV Leave" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="#A5392B" Margin="0,0,14,0"/>
+                    <TextBlock Text="red outline = flagged conflict" FontSize="11" Foreground="{StaticResource InkFaintBrush}"/>
+                </StackPanel>
+                <TextBlock Text="{Binding StatusText}" DockPanel.Dock="Right" FontFamily="{StaticResource MonoFont}" FontSize="11" Foreground="{StaticResource InkFaintBrush}"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

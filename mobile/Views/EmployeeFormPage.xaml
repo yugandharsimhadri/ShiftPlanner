@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.EmployeeFormPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    x:DataType="vm:EmployeeFormViewModel"
+    Title="Employee">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,16" Spacing="16">
+
+            <Label Text="Employee details" Style="{StaticResource PageTitle}" FontSize="22" />
+
+            <Label
+                Text="{Binding ErrorMessage}"
+                Style="{StaticResource CaptionLabel}"
+                TextColor="{StaticResource ShiftLeaveFg}"
+                IsVisible="{Binding HasError}" />
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="EMPLOYEE CODE" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding Code}" Placeholder="e.g. EMP-004" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="FULL NAME" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding Name}" Placeholder="e.g. Priya Nair" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="PHONE" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding Phone}" Keyboard="Telephone" Placeholder="e.g. 98450 12233" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="EMAIL (OPTIONAL)" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding Email}" Keyboard="Email" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="TRACK" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Tracks}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedTrack}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="SUBTRACK (OPTIONAL)" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Subtracks}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SelectedSubtrack}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="ROLE / TITLE" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding Role}" Placeholder="e.g. Picker, Cashier" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="EMPLOYMENT TYPE" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding EmploymentTypes}" SelectedItem="{Binding EmploymentType}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="JOIN DATE" Style="{StaticResource FieldLabel}" />
+                <DatePicker Date="{Binding JoinDate}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="WEEKLY OFF" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding WeeklyOffChoices}" SelectedItem="{Binding WeeklyOff}" />
+            </VerticalStackLayout>
+
+            <Grid ColumnDefinitions="*,Auto">
+                <Label Grid.Column="0" Text="ACTIVE" Style="{StaticResource FieldLabel}" VerticalOptions="Center" />
+                <Switch Grid.Column="1" IsToggled="{Binding IsActive}" />
+            </Grid>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="NOTES (OPTIONAL)" Style="{StaticResource FieldLabel}" />
+                <Editor Text="{Binding Notes}" HeightRequest="80" AutoSize="TextChanges" />
+            </VerticalStackLayout>
+
+            <Button Text="Save" Command="{Binding SaveCommand}" IsEnabled="{Binding IsNotBusy}" />
+            <Button Text="Cancel" Style="{StaticResource GhostButton}" Command="{Binding CancelCommand}" />
+
+            <Button
+                Text="Delete employee"
+                Style="{StaticResource DangerButton}"
+                Command="{Binding DeleteCommand}"
+                IsVisible="{Binding IsEditMode}" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

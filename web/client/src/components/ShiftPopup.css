@@ -1,0 +1,69 @@
+.shift-popup {
+  position: fixed;
+  z-index: 200;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+  width: 220px;
+  animation: modal-in 150ms var(--ease);
+}
+
+.shift-popup-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ink-faint);
+  padding: 4px 8px 8px;
+}
+
+.shift-popup-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 9px;
+  font-size: 13px;
+  color: var(--ink);
+  transition: background-color 120ms var(--ease);
+}
+
+.shift-popup-option:hover {
+  background: color-mix(in srgb, var(--chip-color, var(--accent)) 12%, var(--surface));
+}
+
+.shift-popup-option.selected {
+  border-color: var(--chip-color, var(--accent));
+  background: color-mix(in srgb, var(--chip-color, var(--accent)) 14%, var(--surface));
+}
+
+.shift-popup-code {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--chip-color, var(--ink));
+  width: 28px;
+  flex-shrink: 0;
+}
+
+.shift-popup-name {
+  flex: 1;
+}
+
+.shift-popup-time {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.shift-popup-clear {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 8px;
+  color: var(--ink-faint);
+}

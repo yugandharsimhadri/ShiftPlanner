@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.ProfilePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    x:DataType="vm:ProfileViewModel"
+    Title="Profile">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20,16" Spacing="20">
+
+            <Label Text="Profile" Style="{StaticResource PageTitle}" />
+
+            <Border Style="{StaticResource CardBorder}">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="SIGNED IN AS" Style="{StaticResource FieldLabel}" />
+                    <Label Text="{Binding UserEmail}" Style="{StaticResource ListTitleLabel}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource CardBorder}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="CURRENT TEAM" Style="{StaticResource FieldLabel}" />
+                    <Grid ColumnDefinitions="*,Auto">
+                        <Label Text="{Binding TeamName}" Style="{StaticResource ListTitleLabel}" VerticalOptions="Center" />
+                        <Border Grid.Column="1" Style="{StaticResource RoleBadgeBorder}" VerticalOptions="Center">
+                            <Label Text="{Binding TeamRole}" Style="{StaticResource RoleBadgeLabel}" />
+                        </Border>
+                    </Grid>
+                    <Button
+                        Text="Switch team"
+                        Style="{StaticResource GhostButton}"
+                        FontSize="14"
+                        HorizontalOptions="Start"
+                        Command="{Binding SwitchTeamCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource CardBorder}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="MY EMPLOYEE CODE" Style="{StaticResource FieldLabel}" />
+                    <Entry Text="{Binding EmployeeCode}" Placeholder="e.g. EMP-004" />
+                    <Label
+                        Text="Matches the Code on your roster record, so My Shifts knows which entries are yours. Ask your team admin if you're not sure what yours is."
+                        Style="{StaticResource CaptionLabel}" />
+                    <Button
+                        Text="Save"
+                        Style="{StaticResource GhostButton}"
+                        FontSize="14"
+                        HorizontalOptions="Start"
+                        Command="{Binding SaveEmployeeCodeCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource CardBorder}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="API SERVER ADDRESS" Style="{StaticResource FieldLabel}" />
+                    <Entry
+                        Text="{Binding ApiBaseUrl}"
+                        Placeholder="http://192.168.1.50:5000"
+                        Keyboard="Url" />
+                    <Label
+                        Text="The address of your self-hosted ShiftPlanner Web server."
+                        Style="{StaticResource CaptionLabel}" />
+                    <Button
+                        Text="Save address"
+                        Command="{Binding SaveServerAddressCommand}"
+                        HorizontalOptions="Start" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Label
+                Text="{Binding StatusMessage}"
+                Style="{StaticResource CaptionLabel}"
+                TextColor="{AppThemeBinding Light={StaticResource AccentLight}, Dark={StaticResource AccentDark}}"
+                IsVisible="{Binding HasStatusMessage}" />
+
+            <Button
+                Text="Log out"
+                Style="{StaticResource DangerButton}"
+                Command="{Binding LogoutCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

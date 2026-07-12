@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.TeamGatePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    xmlns:models="clr-namespace:ShiftPlanner.Mobile.Models"
+    x:DataType="vm:TeamGateViewModel"
+    Shell.NavBarIsVisible="False">
+
+    <ScrollView>
+        <VerticalStackLayout
+            Padding="28,0"
+            Spacing="24"
+            VerticalOptions="Center"
+            MaximumWidthRequest="420"
+            HorizontalOptions="Center">
+
+            <ActivityIndicator IsRunning="{Binding IsLoading}" IsVisible="{Binding IsLoading}" HorizontalOptions="Center" />
+
+            <!-- Picker: two or more teams -->
+            <VerticalStackLayout Spacing="16" IsVisible="{Binding ShowPicker}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Choose a team" Style="{StaticResource FieldLabel}" HorizontalOptions="Center" />
+                    <Label Text="Which team are you working in?" Style="{StaticResource PageTitle}" FontSize="22" HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+                    <Label
+                        Text="Each team's roster is completely independent. You can switch anytime from Profile."
+                        Style="{StaticResource CaptionLabel}"
+                        HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+
+                <CollectionView ItemsSource="{Binding Teams}" SelectionMode="None">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:TeamSummary">
+                            <Border Style="{StaticResource CardBorder}" Margin="0,0,0,10">
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SelectTeamCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Border.GestureRecognizers>
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Text="{Binding Name}" Style="{StaticResource ListTitleLabel}" VerticalOptions="Center" />
+                                    <Border Grid.Column="1" Style="{StaticResource RoleBadgeBorder}" VerticalOptions="Center">
+                                        <Label Text="{Binding Role}" Style="{StaticResource RoleBadgeLabel}" />
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <Button Text="+ Create a new team instead" Style="{StaticResource TextLinkButton}" Command="{Binding ShowCreateInsteadCommand}" />
+            </VerticalStackLayout>
+
+            <!-- Create form: zero teams, or chosen from the picker -->
+            <VerticalStackLayout Spacing="16" IsVisible="{Binding ShowCreateForm}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="Name your team" Style="{StaticResource PageTitle}" FontSize="22" HorizontalOptions="Center" HorizontalTextAlignment="Center" />
+                    <Label
+                        Text="You'll be the Admin — able to add teammates and manage the roster from the web app."
+                        Style="{StaticResource CaptionLabel}"
+                        HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+
+                <Border Style="{StaticResource CardBorder}">
+                    <VerticalStackLayout Spacing="16">
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="TEAM NAME" Style="{StaticResource FieldLabel}" />
+                            <Entry Text="{Binding NewTeamName}" Placeholder="e.g. Riverside Clinic" ReturnType="Go" ReturnCommand="{Binding CreateTeamCommand}" />
+                        </VerticalStackLayout>
+
+                        <Button Text="Create team" Command="{Binding CreateTeamCommand}" IsEnabled="{Binding IsNotBusy}" />
+                        <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <Label
+                Text="{Binding ErrorMessage}"
+                TextColor="{StaticResource ShiftLeaveFg}"
+                FontSize="13"
+                HorizontalTextAlignment="Center"
+                IsVisible="{Binding HasError}" />
+
+            <Button Text="Sign out" Style="{StaticResource TextLinkButton}" Command="{Binding SignOutCommand}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

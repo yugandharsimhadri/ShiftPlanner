@@ -1,0 +1,24 @@
+# .NET build output
+bin/
+obj/
+*.user
+publish/
+
+# SQLite runtime databases (local data, not source)
+*.db
+*.db-shm
+*.db-wal
+
+# Node / web client
+node_modules/
+dist/
+.vite/
+
+# IDE / tool state
+.vs/
+.vscode/
+.claude/
+
+# OS cruft
+.DS_Store
+Thumbs.db

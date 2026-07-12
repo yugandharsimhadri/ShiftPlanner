@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.LoginPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    x:DataType="vm:LoginViewModel"
+    Shell.NavBarIsVisible="False">
+
+    <ScrollView>
+        <VerticalStackLayout
+            Padding="28,0"
+            Spacing="24"
+            VerticalOptions="Center"
+            MaximumWidthRequest="420"
+            HorizontalOptions="Center">
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="ShiftPlanner" Style="{StaticResource PageTitle}" HorizontalOptions="Center" FontSize="30" />
+                <Label Text="{Binding SubtitleText}" Style="{StaticResource SubtitleLabel}" HorizontalOptions="Center" />
+            </VerticalStackLayout>
+
+            <Border Style="{StaticResource CardBorder}">
+                <VerticalStackLayout Spacing="16">
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="SERVER ADDRESS" Style="{StaticResource FieldLabel}" />
+                        <Entry
+                            Text="{Binding ApiBaseUrl}"
+                            Placeholder="http://192.168.1.50:5000"
+                            Keyboard="Url" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="EMAIL" Style="{StaticResource FieldLabel}" />
+                        <Entry
+                            Text="{Binding Email}"
+                            Placeholder="you@example.com"
+                            Keyboard="Email"
+                            ReturnType="Next" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="PASSWORD" Style="{StaticResource FieldLabel}" />
+                        <Entry
+                            Text="{Binding Password}"
+                            IsPassword="True"
+                            Placeholder="Your password"
+                            ReturnType="Go"
+                            ReturnCommand="{Binding LoginCommand}" />
+                    </VerticalStackLayout>
+
+                    <Label
+                        Text="{Binding ErrorMessage}"
+                        TextColor="{StaticResource ShiftLeaveFg}"
+                        FontSize="13"
+                        IsVisible="{Binding HasError}" />
+
+                    <Button
+                        Text="{Binding SubmitText}"
+                        Command="{Binding LoginCommand}"
+                        IsEnabled="{Binding IsNotBusy}" />
+
+                    <ActivityIndicator
+                        IsRunning="{Binding IsBusy}"
+                        IsVisible="{Binding IsBusy}"
+                        HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Button
+                Text="{Binding ToggleModeText}"
+                Command="{Binding ToggleModeCommand}"
+                Style="{StaticResource TextLinkButton}" />
+
+            <Label
+                Text="Your self-hosted ShiftPlanner Web server's address. You can change this again later from the Profile tab."
+                Style="{StaticResource CaptionLabel}"
+                HorizontalTextAlignment="Center" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

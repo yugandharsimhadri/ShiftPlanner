@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.RosterPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    xmlns:conv="clr-namespace:ShiftPlanner.Mobile.Converters"
+    x:DataType="vm:RosterViewModel"
+    Title="Roster">
+
+    <ContentPage.Resources>
+        <conv:JustMineTextConverter x:Key="JustMineTextConverter" />
+    </ContentPage.Resources>
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Copy fwd" Command="{Binding CopyForwardCommand}" IsEnabled="{Binding CanEdit}" />
+        <ToolbarItem Text="Export" Command="{Binding ExportCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
+        <CollectionView ItemsSource="{Binding Groups}" IsGrouped="True">
+
+            <CollectionView.Header>
+                <VerticalStackLayout Padding="20,16,20,10" Spacing="14">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Roster" Style="{StaticResource PageTitle}" />
+                        <Label Text="{Binding DateLabel}" Style="{StaticResource SubtitleLabel}" />
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="Auto,*,Auto" VerticalOptions="Center">
+                        <Button Grid.Column="0" Text="&#8249;" Style="{StaticResource GhostButton}" Command="{Binding PreviousDayCommand}" />
+                        <Button Grid.Column="1" Text="Today" Style="{StaticResource TextLinkButton}" Command="{Binding GoToTodayCommand}" HorizontalOptions="Center" />
+                        <Button Grid.Column="2" Text="&#8250;" Style="{StaticResource GhostButton}" Command="{Binding NextDayCommand}" />
+                    </Grid>
+
+                    <Button
+                        Text="{Binding ShowJustMine, Converter={StaticResource JustMineTextConverter}}"
+                        Style="{StaticResource GhostButton}"
+                        FontSize="13"
+                        HorizontalOptions="Start"
+                        Command="{Binding ToggleJustMineCommand}" />
+
+                    <Label
+                        Text="{Binding ErrorMessage}"
+                        Style="{StaticResource CaptionLabel}"
+                        TextColor="{StaticResource ShiftLeaveFg}"
+                        IsVisible="{Binding HasError}" />
+                </VerticalStackLayout>
+            </CollectionView.Header>
+
+            <CollectionView.GroupHeaderTemplate>
+                <DataTemplate x:DataType="vm:RosterTrackGroup">
+                    <Label
+                        Text="{Binding TrackName}"
+                        Style="{StaticResource FieldLabel}"
+                        Padding="20,10,20,4"
+                        BackgroundColor="{AppThemeBinding Light={StaticResource PageBackgroundLight}, Dark={StaticResource PageBackgroundDark}}" />
+                </DataTemplate>
+            </CollectionView.GroupHeaderTemplate>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:RosterEmployeeRowViewModel">
+                    <Grid Padding="20,10" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.TapShiftCommand}"
+                                CommandParameter="{Binding .}" />
+                        </Grid.GestureRecognizers>
+                        <Label
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Text="{Binding EmployeeName}"
+                            Style="{StaticResource ListTitleLabel}"
+                            VerticalOptions="End" />
+                        <Label
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            Text="{Binding EmployeeCode}"
+                            Style="{StaticResource CaptionLabel}"
+                            VerticalOptions="Start" />
+                        <Border
+                            Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            Style="{StaticResource ChipBorderBase}"
+                            BackgroundColor="{Binding ChipBackground}"
+                            VerticalOptions="Center">
+                            <Label
+                                Text="{Binding ShiftLabel}"
+                                TextColor="{Binding ChipForeground}"
+                                FontAttributes="Bold"
+                                FontSize="12" />
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="40" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Label Text="No roster data yet. Pull down to refresh." Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+        </CollectionView>
+    </RefreshView>
+</ContentPage>

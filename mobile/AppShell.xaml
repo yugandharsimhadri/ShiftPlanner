@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="ShiftPlanner.Mobile.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:ShiftPlanner.Mobile.Views"
+    Title="ShiftPlanner"
+    FlyoutBehavior="Disabled">
+
+    <!-- Shown first. On successful login, LoginViewModel navigates to "//teamgate".
+         If a still-valid token and a previously-picked team are already stored,
+         AppShell.xaml.cs jumps straight to "//main/roster" on startup instead. -->
+    <ShellContent
+        Route="login"
+        ContentTemplate="{DataTemplate views:LoginPage}"
+        Shell.NavBarIsVisible="False" />
+
+    <!-- Picks which team this session works in — every account is a member of at least
+         one team by the time it can sign in, but may belong to several. -->
+    <ShellContent
+        Route="teamgate"
+        ContentTemplate="{DataTemplate views:TeamGatePage}"
+        Shell.NavBarIsVisible="False" />
+
+    <!-- All five tabs are always present for every role — each screen gates its own edit
+         affordances by AppSettingsStore.CurrentTeamCanEdit / CurrentTeamIsAdmin instead of
+         the tab bar changing shape per role. A Viewer simply sees no "+"/"Delete"/"Invite"
+         controls on screens they can't act on. See the plan's §08 for the reasoning. -->
+    <TabBar Route="main">
+        <Tab Title="Roster" Route="roster">
+            <ShellContent ContentTemplate="{DataTemplate views:RosterPage}" />
+        </Tab>
+        <Tab Title="Employees" Route="employees">
+            <ShellContent ContentTemplate="{DataTemplate views:EmployeesPage}" />
+        </Tab>
+        <Tab Title="Settings" Route="settings">
+            <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
+        </Tab>
+        <Tab Title="Team" Route="team">
+            <ShellContent ContentTemplate="{DataTemplate views:TeamPage}" />
+        </Tab>
+        <Tab Title="Profile" Route="profile">
+            <ShellContent ContentTemplate="{DataTemplate views:ProfilePage}" />
+        </Tab>
+    </TabBar>
+
+</Shell>

@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    x:DataType="vm:SettingsViewModel"
+    Title="Settings">
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
+        <ScrollView>
+            <VerticalStackLayout Padding="20,16" Spacing="24">
+
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Settings" Style="{StaticResource PageTitle}" />
+                    <Label Text="Tracks and shift types for this team" Style="{StaticResource SubtitleLabel}" />
+                </VerticalStackLayout>
+
+                <Label
+                    Text="{Binding ErrorMessage}"
+                    Style="{StaticResource CaptionLabel}"
+                    TextColor="{StaticResource ShiftLeaveFg}"
+                    IsVisible="{Binding HasError}" />
+
+                <!-- Tracks -->
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="TRACKS" Style="{StaticResource FieldLabel}" />
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Tracks}" Spacing="0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TrackItemViewModel">
+                                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,8" Padding="14">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                        <BoxView Grid.Column="0" Color="{Binding SwatchColor}" WidthRequest="14" HeightRequest="14" CornerRadius="7" VerticalOptions="Start" />
+                                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                            <Label Text="{Binding Name}" Style="{StaticResource ListTitleLabel}" />
+                                            <Label Text="{Binding LeadLabel}" Style="{StaticResource CaptionLabel}" />
+                                            <Label
+                                                Text="{Binding SubtracksLabel}"
+                                                Style="{StaticResource CaptionLabel}"
+                                                TextColor="{StaticResource AccentLight}">
+                                                <Label.GestureRecognizers>
+                                                    <TapGestureRecognizer
+                                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.ManageSubtracksCommand}"
+                                                        CommandParameter="{Binding .}" />
+                                                </Label.GestureRecognizers>
+                                            </Label>
+                                        </VerticalStackLayout>
+                                        <Button
+                                            Grid.Column="2"
+                                            Text="Delete"
+                                            Style="{StaticResource TextLinkButton}"
+                                            FontSize="12"
+                                            IsVisible="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.CanEdit}"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteTrackCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <Border Style="{StaticResource CardBorder}" IsVisible="{Binding CanEdit}">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="ADD TRACK" Style="{StaticResource FieldLabel}" />
+                            <Entry Text="{Binding NewTrackName}" Placeholder="Track name" />
+                            <Entry Text="{Binding NewTrackLead}" Placeholder="Lead name (optional)" />
+                            <Entry Text="{Binding NewTrackColor}" Placeholder="#2F7D6B" />
+                            <Button Text="Add track" Style="{StaticResource GhostButton}" HorizontalOptions="Start" Command="{Binding AddTrackCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border Style="{StaticResource CardBorder}" IsVisible="{Binding CanEdit}">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="ADD SUBTRACK" Style="{StaticResource FieldLabel}" />
+                            <Picker ItemsSource="{Binding Tracks}" ItemDisplayBinding="{Binding Name}" SelectedItem="{Binding SubtrackParentTrack}" />
+                            <Entry Text="{Binding NewSubtrackName}" Placeholder="Subtrack name" />
+                            <Button Text="Add subtrack" Style="{StaticResource GhostButton}" HorizontalOptions="Start" Command="{Binding AddSubtrackCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+
+                <!-- Shift types -->
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="SHIFT TYPES" Style="{StaticResource FieldLabel}" />
+
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding ShiftTypes}" Spacing="0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ShiftTypeItemViewModel">
+                                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,8" Padding="14">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                        <Border Grid.Column="0" Style="{StaticResource ChipBorderBase}" BackgroundColor="{Binding SwatchColor}" VerticalOptions="Center">
+                                            <Label Text="{Binding Code}" FontAttributes="Bold" FontSize="12" TextColor="{StaticResource InkLight}" />
+                                        </Border>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                            <Label Text="{Binding Name}" Style="{StaticResource ListTitleLabel}" />
+                                            <Label Text="{Binding TimeRangeLabel}" Style="{StaticResource CaptionLabel}" />
+                                        </VerticalStackLayout>
+                                        <Button
+                                            Grid.Column="2"
+                                            Text="Delete"
+                                            Style="{StaticResource TextLinkButton}"
+                                            FontSize="12"
+                                            IsVisible="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.CanEdit}"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteShiftTypeCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+
+                    <Border Style="{StaticResource CardBorder}" IsVisible="{Binding CanEdit}">
+                        <VerticalStackLayout Spacing="10">
+                            <Label Text="ADD SHIFT TYPE" Style="{StaticResource FieldLabel}" />
+                            <Entry Text="{Binding NewShiftCode}" Placeholder="Code, e.g. M" />
+                            <Entry Text="{Binding NewShiftName}" Placeholder="Name, e.g. Morning" />
+                            <Entry Text="{Binding NewShiftColor}" Placeholder="#2F7D6B" />
+                            <Grid ColumnDefinitions="*,Auto">
+                                <Label Grid.Column="0" Text="OVERNIGHT" Style="{StaticResource FieldLabel}" VerticalOptions="Center" />
+                                <Switch Grid.Column="1" IsToggled="{Binding NewShiftOvernight}" />
+                            </Grid>
+                            <Button Text="Add shift type" Style="{StaticResource GhostButton}" HorizontalOptions="Start" Command="{Binding AddShiftTypeCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

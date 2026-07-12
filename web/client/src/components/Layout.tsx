@@ -1,0 +1,49 @@
+import { NavLink, Outlet, Navigate } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
+import { useTeam } from '../team/TeamContext'
+import TeamSwitcher from './TeamSwitcher'
+import './Layout.css'
+
+export default function Layout() {
+  const { isAuthenticated, logout } = useAuth()
+  const { teams, isLoading, currentTeam, currentRole } = useTeam()
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (isLoading) return <div className="app-loading">Loading your teams…</div>
+  if (teams.length === 0) return <Navigate to="/create-team" replace />
+  if (!currentTeam) return <Navigate to="/select-team" replace />
+
+  return (
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="app-brand">
+          <span className="app-brand-mark" />
+          <h1>ShiftPlanner</h1>
+        </div>
+        <nav className="app-nav">
+          <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
+            Roster
+          </NavLink>
+          <NavLink to="/employees" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Employees
+          </NavLink>
+          {currentRole === 'Admin' && (
+            <NavLink to="/members" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Members
+            </NavLink>
+          )}
+          <NavLink to="/settings" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Settings
+          </NavLink>
+        </nav>
+        <TeamSwitcher />
+        <button className="btn-ghost" onClick={logout}>
+          Log out
+        </button>
+      </header>
+      <main className="app-main">
+        <Outlet />
+      </main>
+    </div>
+  )
+}

@@ -1,0 +1,73 @@
+.roster-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+}
+
+.month-nav button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  border-radius: 7px;
+}
+
+.month-label {
+  min-width: 118px;
+  text-align: center;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.track-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.track-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.track-heading h3 {
+  font-size: 16px;
+}
+
+.track-heading .pill-dot {
+  width: 11px;
+  height: 11px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.track-lead {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+.track-count {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 3px 10px;
+  border-radius: 999px;
+}

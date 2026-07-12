@@ -1,0 +1,80 @@
+using Microsoft.AspNetCore.Identity;
+using ShiftPlanner.Api.Models;
+
+namespace ShiftPlanner.Api.Data;
+
+public static class DbSeeder
+{
+    public const string AdminEmail = "admin@shiftplanner.local";
+    public const string AdminPassword = "ShiftAdmin!2026";
+    public const string DemoTeamName = "Demo Team";
+
+    public static async Task SeedAsync(AppDbContext db, UserManager<IdentityUser> userManager, ILogger logger)
+    {
+        db.Database.EnsureCreated();
+
+        var admin = await userManager.FindByEmailAsync(AdminEmail);
+        if (admin is null)
+        {
+            admin = new IdentityUser
+            {
+                UserName = AdminEmail,
+                Email = AdminEmail,
+                EmailConfirmed = true
+            };
+            var result = await userManager.CreateAsync(admin, AdminPassword);
+            if (result.Succeeded)
+            {
+                logger.LogInformation("=====================================================");
+                logger.LogInformation("Seeded admin user -> Email: {Email}  Password: {Password}", AdminEmail, AdminPassword);
+                logger.LogInformation("=====================================================");
+            }
+            else
+            {
+                logger.LogError("Failed to seed admin user: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
+                return;
+            }
+        }
+
+        if (db.Teams.Any()) return;
+
+        var team = new Team { Name = DemoTeamName, CreatedByUserId = admin.Id };
+        db.Teams.Add(team);
+        db.SaveChanges();
+
+        db.TeamMemberships.Add(new TeamMembership
+        {
+            TeamId = team.Id,
+            UserId = admin.Id,
+            Email = AdminEmail,
+            Role = TeamRole.Admin,
+            Status = MembershipStatus.Active
+        });
+
+        var frontDesk = new Track { TeamId = team.Id, Name = "Front Desk", LeadName = "Priya Nair", Color = "#4453AD" };
+        var warehouse = new Track { TeamId = team.Id, Name = "Warehouse", LeadName = "Arjun Mehta", Color = "#A8701F" };
+        db.Tracks.AddRange(frontDesk, warehouse);
+        db.SaveChanges();
+
+        db.Subtracks.AddRange(
+            new Subtrack { TeamId = team.Id, TrackId = frontDesk.Id, Name = "Reception" },
+            new Subtrack { TeamId = team.Id, TrackId = frontDesk.Id, Name = "Billing" },
+            new Subtrack { TeamId = team.Id, TrackId = warehouse.Id, Name = "Inbound" },
+            new Subtrack { TeamId = team.Id, TrackId = warehouse.Id, Name = "Outbound" }
+        );
+
+        db.ShiftTypes.AddRange(
+            new ShiftType { TeamId = team.Id, Code = "M", Name = "Morning", Start = new TimeOnly(6, 0), End = new TimeOnly(14, 0), Color = "#A8701F", IsOvernight = false },
+            new ShiftType { TeamId = team.Id, Code = "E", Name = "Evening", Start = new TimeOnly(14, 0), End = new TimeOnly(22, 0), Color = "#4453AD", IsOvernight = false },
+            new ShiftType { TeamId = team.Id, Code = "N", Name = "Night", Start = new TimeOnly(22, 0), End = new TimeOnly(6, 0), Color = "#22314F", IsOvernight = true },
+            new ShiftType { TeamId = team.Id, Code = "OFF", Name = "Off", Start = null, End = null, Color = "#6E7D78", IsOvernight = false },
+            new ShiftType { TeamId = team.Id, Code = "LV", Name = "Leave", Start = null, End = null, Color = "#A5392B", IsOvernight = false }
+        );
+
+        var currentYear = DateTime.Now.Year;
+        db.Holidays.Add(new Holiday { TeamId = team.Id, Date = new DateOnly(currentYear, 8, 15), Name = "Independence Day" });
+
+        db.SaveChanges();
+        logger.LogInformation("Seeded '{Team}' with tracks, subtracks, shift types, and holiday. Admin is a member.", DemoTeamName);
+    }
+}
