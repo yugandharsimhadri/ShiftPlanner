@@ -59,6 +59,11 @@ public static class DbSeeder
             CreatedByUserId = admin.Id,
         };
         db.People.Add(adminPerson);
+
+        var locations = MasterDataSeed.Cities.Select(name => new Location { TeamId = team.Id, Name = name }).ToList();
+        var jobRoles = MasterDataSeed.JobRoles.Select(name => new JobRole { TeamId = team.Id, Name = name }).ToList();
+        db.Locations.AddRange(locations);
+        db.JobRoles.AddRange(jobRoles);
         db.SaveChanges();
 
         db.TeamMembers.Add(new TeamMember
@@ -66,7 +71,7 @@ public static class DbSeeder
             TeamId = team.Id,
             PersonId = adminPerson.Id,
             Code = "EMP-001",
-            RoleTitle = "Admin",
+            JobRoleId = jobRoles.First(r => r.Name == "Admin").Id,
             EmploymentType = EmploymentType.FullTime,
             JoinDate = DateOnly.FromDateTime(DateTime.Today),
             AccessRole = TeamRole.Admin,

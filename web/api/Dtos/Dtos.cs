@@ -6,6 +6,10 @@ public record TrackDto(int? Id, string Name, string? LeadName, string Color);
 
 public record SubtrackDto(int? Id, int TrackId, string Name);
 
+public record LocationDto(int? Id, string Name);
+
+public record JobRoleDto(int? Id, string Name);
+
 public record ShiftTypeDto(int? Id, string Code, string Name, TimeOnly? Start, TimeOnly? End, string Color, bool IsOvernight, bool IsWorkShift);
 
 public record HolidayDto(int? Id, DateOnly Date, string Name);
@@ -49,8 +53,10 @@ public record TeamMemberDto(
     string? TrackName,
     int? SubtrackId,
     string? SubtrackName,
-    string RoleTitle,
-    string? Location,
+    int? JobRoleId,
+    string? JobRoleName,
+    int? LocationId,
+    string? LocationName,
     EmploymentType EmploymentType,
     DateOnly JoinDate,
     EmployeeStatus Status,
@@ -71,8 +77,8 @@ public record CreateTeamMemberDto(
     string Code,
     int? TrackId,
     int? SubtrackId,
-    string RoleTitle,
-    string? Location,
+    int? JobRoleId,
+    int? LocationId,
     EmploymentType EmploymentType,
     DateOnly JoinDate,
     EmployeeStatus Status,
@@ -88,8 +94,8 @@ public record UpdateTeamMemberDto(
     string Code,
     int? TrackId,
     int? SubtrackId,
-    string RoleTitle,
-    string? Location,
+    int? JobRoleId,
+    int? LocationId,
     EmploymentType EmploymentType,
     DateOnly JoinDate,
     EmployeeStatus Status,
@@ -103,8 +109,8 @@ public record AssignPersonToTeamDto(
     string Code,
     int? TrackId,
     int? SubtrackId,
-    string RoleTitle,
-    string? Location,
+    int? JobRoleId,
+    int? LocationId,
     EmploymentType EmploymentType,
     DateOnly JoinDate,
     TeamRole AccessRole

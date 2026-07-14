@@ -33,7 +33,7 @@ public static class ExportEndpoints
                 ws.Cell(row, 1).Value = member.Code;
                 ws.Cell(row, 2).Value = member.Person?.Name ?? "";
                 ws.Cell(row, 3).Value = member.Track?.Name ?? "";
-                ws.Cell(row, 4).Value = member.Location ?? "";
+                ws.Cell(row, 4).Value = member.Location?.Name ?? "";
                 for (var i = 0; i < days.Count; i++)
                 {
                     var shiftCode = entries.FirstOrDefault(e => e.TeamMemberId == member.Id && e.Date == days[i])?.ShiftCode ?? "";
@@ -68,7 +68,7 @@ public static class ExportEndpoints
                 sb.Append(CsvEscape(member.Code)).Append(',')
                   .Append(CsvEscape(member.Person?.Name ?? "")).Append(',')
                   .Append(CsvEscape(member.Track?.Name ?? "")).Append(',')
-                  .Append(CsvEscape(member.Location ?? ""));
+                  .Append(CsvEscape(member.Location?.Name ?? ""));
                 foreach (var d in days)
                 {
                     var shiftCode = entries.FirstOrDefault(e => e.TeamMemberId == member.Id && e.Date == d)?.ShiftCode ?? "";
@@ -88,7 +88,7 @@ public static class ExportEndpoints
         var end = start.AddMonths(1).AddDays(-1);
 
         var members = await db.TeamMembers.Where(m => m.TeamId == teamId)
-            .Include(m => m.Person).Include(m => m.Track)
+            .Include(m => m.Person).Include(m => m.Track).Include(m => m.Location)
             .OrderBy(m => m.Person!.Name).ToListAsync();
         var entries = await db.RosterEntries.Where(r => r.TeamId == teamId && r.Date >= start && r.Date <= end).ToListAsync();
 

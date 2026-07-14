@@ -84,6 +84,8 @@ app.MapTeamsEndpoints();
 app.MapAuthEndpoints();
 app.MapTracksEndpoints();
 app.MapSubtracksEndpoints();
+app.MapLocationsEndpoints();
+app.MapJobRolesEndpoints();
 app.MapShiftTypesEndpoints();
 app.MapHolidaysEndpoints();
 app.MapRosterEndpoints();

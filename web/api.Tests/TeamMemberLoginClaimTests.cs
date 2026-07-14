@@ -46,7 +46,7 @@ public class TeamMemberLoginClaimTests : IClassFixture<TestWebApplicationFactory
         var team = await client.CreateTeamAsync(adminToken, "Claim Team 2");
 
         var dto = new CreateTeamMemberDto(
-            "Arjun Mehta", "555-0199", null, null, "", null, null, "", null,
+            "Arjun Mehta", "555-0199", null, null, "", null, null, null, null,
             Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today), Models.EmployeeStatus.Active,
             Models.TeamRole.Viewer, new List<int>());
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/teams/current/members")

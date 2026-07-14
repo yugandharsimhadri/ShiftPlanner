@@ -47,6 +47,18 @@ export interface Holiday {
   name: string
 }
 
+// --- Master lists (per-team, extendable) ------------------------------------
+
+export interface Location {
+  id: number
+  name: string
+}
+
+export interface JobRole {
+  id: number
+  name: string
+}
+
 // --- Team members (one merged concept — access + roster, was Employee + Membership) ---
 
 export interface TeamMember {
@@ -61,8 +73,10 @@ export interface TeamMember {
   trackName: string | null
   subtrackId: number | null
   subtrackName: string | null
-  roleTitle: string
-  location: string | null
+  jobRoleId: number | null
+  jobRoleName: string | null
+  locationId: number | null
+  locationName: string | null
   employmentType: EmploymentType
   joinDate: string
   status: EmployeeStatus
@@ -81,8 +95,8 @@ export interface CreateTeamMemberInput {
   code: string
   trackId?: number | null
   subtrackId?: number | null
-  roleTitle: string
-  location?: string | null
+  jobRoleId?: number | null
+  locationId?: number | null
   employmentType: EmploymentType
   joinDate: string
   status: EmployeeStatus
@@ -98,8 +112,8 @@ export interface UpdateTeamMemberInput {
   code: string
   trackId?: number | null
   subtrackId?: number | null
-  roleTitle: string
-  location?: string | null
+  jobRoleId?: number | null
+  locationId?: number | null
   employmentType: EmploymentType
   joinDate: string
   status: EmployeeStatus
@@ -119,8 +133,8 @@ export interface AssignPersonToTeamInput {
   code: string
   trackId?: number | null
   subtrackId?: number | null
-  roleTitle: string
-  location?: string | null
+  jobRoleId?: number | null
+  locationId?: number | null
   employmentType: EmploymentType
   joinDate: string
   accessRole: TeamRole

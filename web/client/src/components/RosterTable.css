@@ -67,7 +67,7 @@
 
 .day-head.off-day {
   background: color-mix(in srgb, var(--shift-leave) 12%, transparent);
-  border-radius: 6px 6px 0 0;
+  border-radius: 3px 3px 0 0;
 }
 
 .day-head.off-day .mono,
@@ -104,7 +104,7 @@
   width: 34px;
   height: 30px;
   border: 1.5px solid var(--line);
-  border-radius: 8px;
+  border-radius: 4px;
   background: var(--surface-soft);
   font-family: var(--font-mono);
   font-weight: 700;

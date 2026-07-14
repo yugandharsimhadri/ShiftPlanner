@@ -14,6 +14,8 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
     public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
     public DbSet<Track> Tracks => Set<Track>();
     public DbSet<Subtrack> Subtracks => Set<Subtrack>();
+    public DbSet<Location> Locations => Set<Location>();
+    public DbSet<JobRole> JobRoles => Set<JobRole>();
     public DbSet<ShiftType> ShiftTypes => Set<ShiftType>();
     public DbSet<RosterEntry> RosterEntries => Set<RosterEntry>();
     public DbSet<Holiday> Holidays => Set<Holiday>();
@@ -51,6 +53,18 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
             .HasOne(m => m.Subtrack)
             .WithMany()
             .HasForeignKey(m => m.SubtrackId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<TeamMember>()
+            .HasOne(m => m.JobRole)
+            .WithMany()
+            .HasForeignKey(m => m.JobRoleId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<TeamMember>()
+            .HasOne(m => m.Location)
+            .WithMany()
+            .HasForeignKey(m => m.LocationId)
             .OnDelete(DeleteBehavior.SetNull);
 
         builder.Entity<TeamMember>()

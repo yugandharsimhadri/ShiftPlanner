@@ -7,6 +7,8 @@ import type {
   CreateTeamMemberInput,
   Holiday,
   ImportResult,
+  JobRole,
+  Location,
   Me,
   RosterResponse,
   ShiftType,
@@ -196,6 +198,36 @@ export async function createSubtrack(payload: { trackId: number; name: string })
 
 export async function deleteSubtrack(id: number): Promise<void> {
   await api.delete(`/api/subtracks/${id}`)
+}
+
+// --- Locations / Job roles (master lists) -------------------------------------
+
+export async function getLocations(): Promise<Location[]> {
+  const res = await api.get('/api/locations')
+  return res.data
+}
+
+export async function createLocation(payload: { name: string }): Promise<Location> {
+  const res = await api.post('/api/locations', { id: null, ...payload })
+  return res.data
+}
+
+export async function deleteLocation(id: number): Promise<void> {
+  await api.delete(`/api/locations/${id}`)
+}
+
+export async function getJobRoles(): Promise<JobRole[]> {
+  const res = await api.get('/api/job-roles')
+  return res.data
+}
+
+export async function createJobRole(payload: { name: string }): Promise<JobRole> {
+  const res = await api.post('/api/job-roles', { id: null, ...payload })
+  return res.data
+}
+
+export async function deleteJobRole(id: number): Promise<void> {
+  await api.delete(`/api/job-roles/${id}`)
 }
 
 // --- Shift types --------------------------------------------------------------

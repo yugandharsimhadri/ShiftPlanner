@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getCompOffs, getRoster, upsertRosterEntry, useCompOff } from '../api/endpoints'
-import { addMonths, daysInMonth, monthLabel } from '../lib/dates'
+import { addMonths, daysInMonth, monthLabel, toIsoDate } from '../lib/dates'
 import RosterTable from '../components/RosterTable'
 import ShiftPopup from '../components/ShiftPopup'
 import CopyMonthModal from '../components/CopyMonthModal'
@@ -41,6 +41,11 @@ export default function Roster() {
     queryKey: ['compoffs', 'pending', popup?.teamMemberId],
     queryFn: () => getCompOffs('Pending', popup!.teamMemberId),
     enabled: !!popup && canEdit,
+  })
+
+  const { data: pendingCompOffsAll } = useQuery({
+    queryKey: ['compoffs', 'pending', 'all'],
+    queryFn: () => getCompOffs('Pending'),
   })
 
   const useCompOffMutation = useMutation({
@@ -90,6 +95,21 @@ export default function Roster() {
     [data]
   )
 
+  const todayIso = toIsoDate(TODAY.getFullYear(), TODAY.getMonth() + 1, TODAY.getDate())
+  const stats = useMemo(() => {
+    const members = data?.teamMembers ?? []
+    const activeMembers = members.filter((m) => m.status === 'Active').length
+    let onShiftToday = 0
+    let offToday = 0
+    for (const member of members) {
+      const entry = entriesMap.get(`${member.id}|${todayIso}`)
+      const shift = entry?.shiftCode ? shiftTypesByCode.get(entry.shiftCode) : undefined
+      if (shift?.isWorkShift) onShiftToday++
+      else if (shift) offToday++
+    }
+    return { activeMembers, onShiftToday, offToday, compOffsPending: pendingCompOffsAll?.length ?? 0 }
+  }, [data, entriesMap, shiftTypesByCode, todayIso, pendingCompOffsAll])
+
   function goMonth(delta: number) {
     const next = addMonths(year, month, delta)
     setYear(next.year)
@@ -133,6 +153,27 @@ export default function Roster() {
 
       {isLoading && <div className="empty-state">Loading roster…</div>}
       {isError && <div className="empty-state error-text">Could not load roster data.</div>}
+
+      {data && (
+        <div className="stat-row">
+          <div className="stat-card">
+            <span className="stat-label">Active members</span>
+            <span className="stat-num">{stats.activeMembers}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">On shift today</span>
+            <span className="stat-num">{stats.onShiftToday}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Off today</span>
+            <span className="stat-num stat-warn">{stats.offToday}</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-label">Comp-offs pending</span>
+            <span className="stat-num stat-warn">{stats.compOffsPending}</span>
+          </div>
+        </div>
+      )}
 
       {data && (
         <div className="track-sections">

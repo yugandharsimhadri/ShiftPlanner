@@ -15,11 +15,12 @@ export default function Layout() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
+      <aside className="app-sidebar">
         <div className="app-brand">
           <span className="app-brand-mark" />
           <h1>ShiftPlanner</h1>
         </div>
+        <TeamSwitcher />
         <nav className="app-nav">
           <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
             Roster
@@ -34,11 +35,10 @@ export default function Layout() {
             Reports
           </NavLink>
         </nav>
-        <TeamSwitcher />
-        <button className="btn-ghost" onClick={logout}>
+        <button className="app-logout" onClick={logout}>
           Log out
         </button>
-      </header>
+      </aside>
       <main className="app-main">
         <Outlet />
       </main>

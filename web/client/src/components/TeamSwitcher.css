@@ -1,36 +1,39 @@
 .team-switcher {
   position: relative;
+  margin-bottom: 6px;
 }
 
 .team-switcher-trigger {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--surface-soft);
-  border: 1.5px solid var(--line);
+  width: 100%;
+  background: var(--sidebar-surface);
+  border: 1px solid var(--sidebar-border);
   border-radius: var(--radius-sm);
-  padding: 6px 10px 6px 14px;
+  padding: 8px 10px 8px 12px;
   font-size: 13px;
-  color: var(--ink);
+  color: var(--sidebar-text);
   transition: border-color 150ms var(--ease);
 }
 
 .team-switcher-trigger:hover {
-  border-color: var(--accent);
+  border-color: var(--sidebar-text-dim);
 }
 
 .team-switcher-name {
-  font-weight: 600;
-  max-width: 160px;
+  font-weight: 700;
+  color: #FFFFFF;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .team-switcher-chevron {
-  color: var(--ink-faint);
+  color: var(--sidebar-text-dim);
   font-size: 13px;
-  margin-left: 2px;
+  margin-left: auto;
 }
 
 .team-switcher-menu {
@@ -64,7 +67,7 @@
   text-align: left;
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 9px 10px;
   font-size: 13.5px;
   color: var(--ink);

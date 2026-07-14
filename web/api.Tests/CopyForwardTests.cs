@@ -80,7 +80,7 @@ public class CopyForwardTests : IClassFixture<TestWebApplicationFactory>
         await SetShiftAsync(client, token, team.Id, member!.Id, new DateOnly(2026, 3, 2), "M");
 
         // Deactivate.
-        var deactivateDto = new UpdateTeamMemberDto("Alice", "555-0100", null, null, "EMP-002", track.Id, null, "Clerk", null,
+        var deactivateDto = new UpdateTeamMemberDto("Alice", "555-0100", null, null, "EMP-002", track.Id, null, null, null,
             Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today),
             Models.EmployeeStatus.Inactive, Models.TeamRole.Viewer);
         var deactivateRequest = new HttpRequestMessage(HttpMethod.Put, $"/api/teams/current/members/{member.Id}")

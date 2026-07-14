@@ -138,6 +138,10 @@
   transition: background-color 120ms var(--ease);
 }
 
+.data-table tbody tr:nth-child(even) {
+  background: var(--surface-soft);
+}
+
 .data-table tbody tr:hover {
   background: var(--accent-soft);
 }
@@ -222,14 +226,27 @@
   text-transform: uppercase;
   letter-spacing: 0.4px;
   padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  border-radius: 3px;
+  background: var(--surface-soft);
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
 }
 
 .badge-role.role-admin {
-  background: var(--accent-2-soft);
-  color: var(--accent-2);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
+}
+
+.badge-role.role-editor {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: transparent;
+}
+
+.badge-role.role-viewer {
+  background: var(--surface-soft);
+  color: var(--ink-soft);
 }
 
 .toolbar {

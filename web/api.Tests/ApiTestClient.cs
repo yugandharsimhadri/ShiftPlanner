@@ -87,7 +87,7 @@ public static class ApiTestClient
         int? trackId = null, string accessRole = "Viewer", string? email = null)
     {
         var dto = new CreateTeamMemberDto(
-            name, "555-0100", email, null, code, trackId, null, "Clerk", null,
+            name, "555-0100", email, null, code, trackId, null, null, null,
             Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today), Models.EmployeeStatus.Active,
             Enum.Parse<Models.TeamRole>(accessRole), new List<int> { teamId });
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/teams/current/members")

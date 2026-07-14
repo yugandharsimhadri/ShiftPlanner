@@ -2,8 +2,12 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   assignExistingPerson,
+  createJobRole,
+  createLocation,
   createSubtrack,
   createTeamMember,
+  getJobRoles,
+  getLocations,
   getMyTeams,
   getNextTeamMemberCode,
   updateTeamMember,
@@ -38,8 +42,8 @@ export default function TeamMemberFormModal({ mode, member, assignPerson, tracks
   const [code, setCode] = useState(member?.code ?? '')
   const [trackId, setTrackId] = useState<number | ''>(member?.trackId ?? '')
   const [subtrackId, setSubtrackId] = useState<number | ''>(member?.subtrackId ?? '')
-  const [roleTitle, setRoleTitle] = useState(member?.roleTitle ?? '')
-  const [location, setLocation] = useState(member?.location ?? '')
+  const [jobRoleId, setJobRoleId] = useState<number | ''>(member?.jobRoleId ?? '')
+  const [locationId, setLocationId] = useState<number | ''>(member?.locationId ?? '')
   const [employmentType, setEmploymentType] = useState<EmploymentType>(member?.employmentType ?? 'FullTime')
   const [joinDate, setJoinDate] = useState(member?.joinDate ?? new Date().toISOString().slice(0, 10))
   const [status, setStatus] = useState<EmployeeStatus>(member?.status ?? 'Active')
@@ -48,8 +52,15 @@ export default function TeamMemberFormModal({ mode, member, assignPerson, tracks
 
   const [addingSubtrack, setAddingSubtrack] = useState(false)
   const [newSubtrackName, setNewSubtrackName] = useState('')
+  const [addingJobRole, setAddingJobRole] = useState(false)
+  const [newJobRoleName, setNewJobRoleName] = useState('')
+  const [addingLocation, setAddingLocation] = useState(false)
+  const [newLocationName, setNewLocationName] = useState('')
 
   const selectedTrack = tracks.find((t) => t.id === trackId)
+
+  const { data: jobRoles } = useQuery({ queryKey: ['job-roles'], queryFn: getJobRoles })
+  const { data: locations } = useQuery({ queryKey: ['locations'], queryFn: getLocations })
 
   useEffect(() => {
     // If the chosen track changes, drop a subtrack selection that no longer applies.
@@ -79,6 +90,24 @@ export default function TeamMemberFormModal({ mode, member, assignPerson, tracks
       queryClient.invalidateQueries({ queryKey: ['tracks'] }).then(() => setSubtrackId(sub.id))
       setNewSubtrackName('')
       setAddingSubtrack(false)
+    },
+  })
+
+  const addJobRoleMutation = useMutation({
+    mutationFn: createJobRole,
+    onSuccess: (role) => {
+      queryClient.invalidateQueries({ queryKey: ['job-roles'] }).then(() => setJobRoleId(role.id))
+      setNewJobRoleName('')
+      setAddingJobRole(false)
+    },
+  })
+
+  const addLocationMutation = useMutation({
+    mutationFn: createLocation,
+    onSuccess: (loc) => {
+      queryClient.invalidateQueries({ queryKey: ['locations'] }).then(() => setLocationId(loc.id))
+      setNewLocationName('')
+      setAddingLocation(false)
     },
   })
 
@@ -113,7 +142,8 @@ export default function TeamMemberFormModal({ mode, member, assignPerson, tracks
       updateMutation.mutate({
         name, phone, email: email || null, notes: notes || null,
         code, trackId: trackId || null, subtrackId: subtrackId || null,
-        roleTitle, location: location || null, employmentType, joinDate, status, accessRole,
+        jobRoleId: jobRoleId || null, locationId: locationId || null,
+        employmentType, joinDate, status, accessRole,
       })
       return
     }
@@ -121,14 +151,16 @@ export default function TeamMemberFormModal({ mode, member, assignPerson, tracks
       assignMutation.mutate({
         personId: assignPerson!.id, teamId: currentTeamId,
         code, trackId: trackId || null, subtrackId: subtrackId || null,
-        roleTitle, location: location || null, employmentType, joinDate, accessRole,
+        jobRoleId: jobRoleId || null, locationId: locationId || null,
+        employmentType, joinDate, accessRole,
       })
       return
     }
     createMutation.mutate({
       name, phone, email: email || null, notes: notes || null,
       code, trackId: trackId || null, subtrackId: subtrackId || null,
-      roleTitle, location: location || null, employmentType, joinDate, status, accessRole, teamIds,
+      jobRoleId: jobRoleId || null, locationId: locationId || null,
+      employmentType, joinDate, status, accessRole, teamIds,
     })
   }
 
@@ -167,11 +199,87 @@ export default function TeamMemberFormModal({ mode, member, assignPerson, tracks
         <div className="field-row">
           <div className="field">
             <label htmlFor="tm-role-title">Role / title</label>
-            <input id="tm-role-title" value={roleTitle} onChange={(e) => setRoleTitle(e.target.value)} placeholder="e.g. Cashier" />
+            <div className="inline-picker">
+              <select id="tm-role-title" value={jobRoleId} onChange={(e) => setJobRoleId(e.target.value ? Number(e.target.value) : '')}>
+                <option value="">None</option>
+                {jobRoles?.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+              {!addingJobRole && (
+                <button type="button" className="btn-ghost inline-add-toggle" onClick={() => setAddingJobRole(true)}>
+                  + New role
+                </button>
+              )}
+            </div>
+            {addingJobRole && (
+              <div className="inline-add-row">
+                <input
+                  autoFocus
+                  placeholder="New role, e.g. Cashier"
+                  value={newJobRoleName}
+                  onChange={(e) => setNewJobRoleName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newJobRoleName.trim()) {
+                      addJobRoleMutation.mutate({ name: newJobRoleName.trim() })
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={!newJobRoleName.trim() || addJobRoleMutation.isPending}
+                  onClick={() => addJobRoleMutation.mutate({ name: newJobRoleName.trim() })}
+                >
+                  {addJobRoleMutation.isPending ? 'Adding…' : 'Add'}
+                </button>
+                <button type="button" className="btn-ghost" onClick={() => { setAddingJobRole(false); setNewJobRoleName('') }}>
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
           <div className="field">
             <label htmlFor="tm-location">Location</label>
-            <input id="tm-location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Bangalore" />
+            <div className="inline-picker">
+              <select id="tm-location" value={locationId} onChange={(e) => setLocationId(e.target.value ? Number(e.target.value) : '')}>
+                <option value="">None</option>
+                {locations?.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+              {!addingLocation && (
+                <button type="button" className="btn-ghost inline-add-toggle" onClick={() => setAddingLocation(true)}>
+                  + New city
+                </button>
+              )}
+            </div>
+            {addingLocation && (
+              <div className="inline-add-row">
+                <input
+                  autoFocus
+                  placeholder="New city"
+                  value={newLocationName}
+                  onChange={(e) => setNewLocationName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newLocationName.trim()) {
+                      addLocationMutation.mutate({ name: newLocationName.trim() })
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={!newLocationName.trim() || addLocationMutation.isPending}
+                  onClick={() => addLocationMutation.mutate({ name: newLocationName.trim() })}
+                >
+                  {addLocationMutation.isPending ? 'Adding…' : 'Add'}
+                </button>
+                <button type="button" className="btn-ghost" onClick={() => { setAddingLocation(false); setNewLocationName('') }}>
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -187,7 +295,7 @@ export default function TeamMemberFormModal({ mode, member, assignPerson, tracks
 
         <div className="field">
           <label htmlFor="tm-subtrack">Subtrack</label>
-          <div className="subtrack-picker">
+          <div className="inline-picker">
             <select
               id="tm-subtrack"
               value={subtrackId}
@@ -200,13 +308,13 @@ export default function TeamMemberFormModal({ mode, member, assignPerson, tracks
               ))}
             </select>
             {selectedTrack && !addingSubtrack && (
-              <button type="button" className="btn-ghost subtrack-add-toggle" onClick={() => setAddingSubtrack(true)}>
+              <button type="button" className="btn-ghost inline-add-toggle" onClick={() => setAddingSubtrack(true)}>
                 + New subtrack
               </button>
             )}
           </div>
           {selectedTrack && addingSubtrack && (
-            <div className="subtrack-inline-add">
+            <div className="inline-add-row">
               <input
                 autoFocus
                 placeholder={`New subtrack under ${selectedTrack.name}`}

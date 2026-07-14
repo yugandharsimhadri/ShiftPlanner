@@ -19,17 +19,18 @@
 
 .badge-lead,
 .badge-colead {
-  font-size: 10.5px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  padding: 2px 8px;
-  border-radius: 999px;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 3px;
 }
 
 .badge-lead {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--accent-2-soft);
+  color: var(--accent-2);
+  border: 1px solid color-mix(in srgb, var(--accent-2) 35%, transparent);
 }
 
 .badge-colead {
@@ -39,8 +40,8 @@
 }
 
 .badge-active {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .unassigned-panel {
@@ -63,27 +64,27 @@
   font-size: 13.5px;
 }
 
-/* Subtrack picker — select + inline "new subtrack" toggle, so adding one doesn't
-   require leaving the form and going to Settings. */
-.subtrack-picker {
+/* Master-list picker — select + inline "new entry" toggle, so adding a subtrack,
+   job role, or location doesn't require leaving the form and going to Settings. */
+.inline-picker {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.subtrack-add-toggle {
+.inline-add-toggle {
   font-size: 12px;
   padding: 6px 10px;
   white-space: nowrap;
 }
 
-.subtrack-inline-add {
+.inline-add-row {
   display: flex;
   gap: 8px;
   margin-top: 8px;
 }
 
-.subtrack-inline-add input {
+.inline-add-row input {
   flex: 1;
 }
 

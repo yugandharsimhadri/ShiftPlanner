@@ -27,11 +27,15 @@ public class TeamMember
     public int? SubtrackId { get; set; }
     public Subtrack? Subtrack { get; set; }
 
-    // Job title, e.g. "Cashier" — distinct from AccessRole below.
-    public string RoleTitle { get; set; } = string.Empty;
+    // Job title, e.g. "Cashier" — distinct from AccessRole below. Picked from the team's
+    // JobRole master list rather than free text, so it doesn't drift into typo variants.
+    public int? JobRoleId { get; set; }
+    public JobRole? JobRole { get; set; }
 
-    // Site/office/city they work out of on this team, e.g. "Bangalore" or "Warehouse 3".
-    public string? Location { get; set; }
+    // Site/office/city they work out of on this team, e.g. "Bangalore". Picked from the
+    // team's Location master list for the same reason.
+    public int? LocationId { get; set; }
+    public Location? Location { get; set; }
     public EmploymentType EmploymentType { get; set; }
     public DateOnly JoinDate { get; set; }
 

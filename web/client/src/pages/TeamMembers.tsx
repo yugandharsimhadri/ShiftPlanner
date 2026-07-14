@@ -124,8 +124,8 @@ export default function TeamMembers() {
                       </span>
                     )}
                   </td>
-                  <td>{m.location}</td>
-                  <td>{m.roleTitle}</td>
+                  <td>{m.locationName}</td>
+                  <td>{m.jobRoleName}</td>
                   <td>
                     <div className="role-cell">
                       {isAdmin ? (
@@ -141,7 +141,7 @@ export default function TeamMembers() {
                           ))}
                         </select>
                       ) : (
-                        <span className={`badge-role${m.accessRole === 'Admin' ? ' role-admin' : ''}`}>{m.accessRole}</span>
+                        <span className={`badge-role role-${m.accessRole.toLowerCase()}`}>{m.accessRole}</span>
                       )}
                       {m.isTeamLead && <span className="badge-lead">Lead</span>}
                       {m.isCoLead && <span className="badge-colead">Co-Lead</span>}

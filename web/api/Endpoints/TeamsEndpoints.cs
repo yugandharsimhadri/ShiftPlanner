@@ -35,6 +35,13 @@ public static class TeamsEndpoints
             db.Teams.Add(team);
             await db.SaveChangesAsync();
 
+            // Every team starts with the same Location/JobRole starter lists — admins can
+            // add more from Settings or right from the team-member form.
+            var jobRoles = MasterDataSeed.JobRoles.Select(n => new JobRole { TeamId = team.Id, Name = n }).ToList();
+            db.Locations.AddRange(MasterDataSeed.Cities.Select(n => new Location { TeamId = team.Id, Name = n }));
+            db.JobRoles.AddRange(jobRoles);
+            await db.SaveChangesAsync();
+
             // Reuse an existing Person for this login if one's already linked (e.g. they
             // were added to another team earlier and it got claimed); otherwise create one.
             var person = await db.People.FirstOrDefaultAsync(p => p.UserId == userId);
@@ -57,7 +64,7 @@ public static class TeamsEndpoints
                 TeamId = team.Id,
                 PersonId = person.Id,
                 Code = "EMP-001",
-                RoleTitle = "Admin",
+                JobRoleId = jobRoles.First(r => r.Name == "Admin").Id,
                 EmploymentType = EmploymentType.FullTime,
                 JoinDate = DateOnly.FromDateTime(DateTime.Today),
                 AccessRole = TeamRole.Admin,
@@ -102,6 +109,8 @@ public static class TeamsEndpoints
                 .Include(m => m.Person)
                 .Include(m => m.Track)
                 .Include(m => m.Subtrack)
+                .Include(m => m.JobRole)
+                .Include(m => m.Location)
                 .OrderBy(m => m.Person!.Name)
                 .ToListAsync();
 
@@ -205,8 +214,8 @@ public static class TeamsEndpoints
                     Code = code,
                     TrackId = dto.TrackId,
                     SubtrackId = dto.SubtrackId,
-                    RoleTitle = dto.RoleTitle,
-                    Location = string.IsNullOrWhiteSpace(dto.Location) ? null : dto.Location.Trim(),
+                    JobRoleId = dto.JobRoleId,
+                    LocationId = dto.LocationId,
                     EmploymentType = dto.EmploymentType,
                     JoinDate = dto.JoinDate,
                     Status = dto.Status,
@@ -251,8 +260,8 @@ public static class TeamsEndpoints
                 Code = code,
                 TrackId = dto.TrackId,
                 SubtrackId = dto.SubtrackId,
-                RoleTitle = dto.RoleTitle,
-                Location = string.IsNullOrWhiteSpace(dto.Location) ? null : dto.Location.Trim(),
+                JobRoleId = dto.JobRoleId,
+                LocationId = dto.LocationId,
                 EmploymentType = dto.EmploymentType,
                 JoinDate = dto.JoinDate,
                 AccessRole = dto.AccessRole,
@@ -286,8 +295,8 @@ public static class TeamsEndpoints
             member.Code = code;
             member.TrackId = dto.TrackId;
             member.SubtrackId = dto.SubtrackId;
-            member.RoleTitle = dto.RoleTitle;
-            member.Location = string.IsNullOrWhiteSpace(dto.Location) ? null : dto.Location.Trim();
+            member.JobRoleId = dto.JobRoleId;
+            member.LocationId = dto.LocationId;
             member.EmploymentType = dto.EmploymentType;
             member.JoinDate = dto.JoinDate;
             member.Status = dto.Status;
@@ -453,16 +462,20 @@ public static class TeamsEndpoints
     private static TeamMemberDto ToDto(TeamMember m) => new(
         m.Id, m.PersonId, m.Person!.Name, m.Person.Phone ?? "", m.Person.Email, m.Person.UserId != null,
         m.Code, m.TrackId, m.Track?.Name, m.SubtrackId, m.Subtrack?.Name,
-        m.RoleTitle, m.Location, m.EmploymentType, m.JoinDate, m.Status, m.Notes, m.AccessRole, m.IsTeamLead, m.IsCoLead, m.CreatedAt);
+        m.JobRoleId, m.JobRole?.Name, m.LocationId, m.Location?.Name,
+        m.EmploymentType, m.JoinDate, m.Status, m.Notes, m.AccessRole, m.IsTeamLead, m.IsCoLead, m.CreatedAt);
 
     private static async Task<TeamMemberDto> BuildDto(AppDbContext db, TeamMember m, Person p)
     {
         string? trackName = m.TrackId is { } tid ? await db.Tracks.Where(t => t.Id == tid).Select(t => t.Name).FirstOrDefaultAsync() : null;
         string? subtrackName = m.SubtrackId is { } sid ? await db.Subtracks.Where(s => s.Id == sid).Select(s => s.Name).FirstOrDefaultAsync() : null;
+        string? jobRoleName = m.JobRoleId is { } rid ? await db.JobRoles.Where(r => r.Id == rid).Select(r => r.Name).FirstOrDefaultAsync() : null;
+        string? locationName = m.LocationId is { } lid ? await db.Locations.Where(l => l.Id == lid).Select(l => l.Name).FirstOrDefaultAsync() : null;
         return new TeamMemberDto(
             m.Id, p.Id, p.Name, p.Phone ?? "", p.Email, p.UserId != null,
             m.Code, m.TrackId, trackName, m.SubtrackId, subtrackName,
-            m.RoleTitle, m.Location, m.EmploymentType, m.JoinDate, m.Status, m.Notes, m.AccessRole, m.IsTeamLead, m.IsCoLead, m.CreatedAt);
+            m.JobRoleId, jobRoleName, m.LocationId, locationName,
+            m.EmploymentType, m.JoinDate, m.Status, m.Notes, m.AccessRole, m.IsTeamLead, m.IsCoLead, m.CreatedAt);
     }
 
     private static async Task<TeamSettingsDto> BuildSettingsDto(AppDbContext db, int teamId)

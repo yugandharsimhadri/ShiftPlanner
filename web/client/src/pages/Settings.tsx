@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  createJobRole,
+  createLocation,
   createShiftType,
   createSubtrack,
   createTrack,
+  deleteJobRole,
+  deleteLocation,
   deleteShiftType,
   deleteSubtrack,
   deleteTrack,
+  getJobRoles,
+  getLocations,
   getShiftTypes,
   getTeamSettings,
   getTracks,
@@ -23,6 +29,8 @@ export default function Settings() {
     <div className="settings-page">
       <TeamSettingsSection />
       <TracksSection />
+      <LocationsSection />
+      <JobRolesSection />
       <ShiftTypesSection />
     </div>
   )
@@ -268,6 +276,107 @@ function TracksSection() {
         </div>
       )}
     </section>
+  )
+}
+
+// Shared by Locations and Job roles — both are flat, team-scoped master lists an
+// admin can add to or prune, same interaction as the subtrack chips above.
+function MasterListSection({
+  title, hint, items, canEdit, onAdd, onDelete, placeholder,
+}: {
+  title: string
+  hint: string
+  items: { id: number; name: string }[] | undefined
+  canEdit: boolean
+  onAdd: (name: string) => void
+  onDelete: (id: number) => void
+  placeholder: string
+}) {
+  const [newName, setNewName] = useState('')
+
+  const submit = () => {
+    if (!newName.trim()) return
+    onAdd(newName.trim())
+    setNewName('')
+  }
+
+  return (
+    <section className="card settings-section">
+      <h2>{title}</h2>
+      <p className="field-hint">{hint}</p>
+      <div className="subtrack-list">
+        {items?.map((item) => (
+          <span className="pill subtrack-pill" key={item.id}>
+            {item.name}
+            {canEdit && (
+              <button className="pill-remove" onClick={() => onDelete(item.id)} aria-label={`Remove ${item.name}`}>
+                ×
+              </button>
+            )}
+          </span>
+        ))}
+        {items?.length === 0 && <p className="field-hint">None yet.</p>}
+      </div>
+      {canEdit && (
+        <div className="add-row">
+          <input
+            placeholder={placeholder}
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && submit()}
+          />
+          <button className="btn" disabled={!newName.trim()} onClick={submit}>
+            Add
+          </button>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function LocationsSection() {
+  const { currentRole } = useTeam()
+  const canEdit = currentRole === 'Editor' || currentRole === 'Admin'
+  const queryClient = useQueryClient()
+  const { data: locations } = useQuery({ queryKey: ['locations'], queryFn: getLocations })
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['locations'] })
+  const createMutation = useMutation({ mutationFn: createLocation, onSuccess: invalidate })
+  const deleteMutation = useMutation({ mutationFn: deleteLocation, onSuccess: invalidate })
+
+  return (
+    <MasterListSection
+      title="Locations"
+      hint="Cities team members can be based out of. Add more as you expand."
+      items={locations}
+      canEdit={canEdit}
+      onAdd={(name) => createMutation.mutate({ name })}
+      onDelete={(id) => deleteMutation.mutate(id)}
+      placeholder="+ city"
+    />
+  )
+}
+
+function JobRolesSection() {
+  const { currentRole } = useTeam()
+  const canEdit = currentRole === 'Editor' || currentRole === 'Admin'
+  const queryClient = useQueryClient()
+  const { data: jobRoles } = useQuery({ queryKey: ['job-roles'], queryFn: getJobRoles })
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['job-roles'] })
+  const createMutation = useMutation({ mutationFn: createJobRole, onSuccess: invalidate })
+  const deleteMutation = useMutation({ mutationFn: deleteJobRole, onSuccess: invalidate })
+
+  return (
+    <MasterListSection
+      title="Job roles / titles"
+      hint="Roles team members can be assigned, e.g. Cashier or Team Lead."
+      items={jobRoles}
+      canEdit={canEdit}
+      onAdd={(name) => createMutation.mutate({ name })}
+      onDelete={(id) => deleteMutation.mutate(id)}
+      placeholder="+ role"
+    />
   )
 }
 

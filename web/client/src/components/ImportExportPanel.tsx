@@ -60,7 +60,8 @@ export default function ImportExportPanel({ year, month, canImport, onClose }: P
               Import team members (.csv or .xlsx)
             </h3>
             <p style={{ fontSize: 12, color: 'var(--ink-faint)', marginTop: 0 }}>
-              Columns: Name, Phone, Email, Track, Subtrack, Role, Location, EmploymentType, JoinDate, Status, Notes
+              Columns: Name, Phone, Email, Track, Subtrack, Role, Location, EmploymentType, JoinDate, Status, Notes.
+              Track, Role, and Location must match existing entries — add new ones under Settings first.
             </p>
             <input
               ref={fileInputRef}

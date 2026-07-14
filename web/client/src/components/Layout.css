@@ -1,6 +1,5 @@
 .app-shell {
   display: flex;
-  flex-direction: column;
   min-height: 100vh;
 }
 
@@ -14,68 +13,93 @@
   background: var(--bg);
 }
 
-.app-header {
+.app-sidebar {
   display: flex;
-  align-items: center;
-  gap: 28px;
-  padding: 12px 28px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
+  flex-direction: column;
+  width: 216px;
+  flex: none;
+  background: var(--sidebar-bg);
+  padding: 18px 14px;
   position: sticky;
   top: 0;
-  z-index: 20;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .app-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 4px 6px;
+  margin-bottom: 18px;
 }
 
 .app-brand-mark {
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: linear-gradient(160deg, var(--accent), #14245C);
   flex-shrink: 0;
-  box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 40%, transparent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
 .app-brand h1 {
-  font-size: 18.5px;
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  font-weight: 700;
   letter-spacing: 0.1px;
+  color: #FFFFFF;
 }
 
 .app-nav {
   display: flex;
-  gap: 4px;
-  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 18px;
 }
 
 .app-nav a {
   text-decoration: none;
-  color: var(--ink-soft);
+  color: var(--sidebar-text-dim);
   font-size: 13.5px;
   font-weight: 600;
-  padding: 8px 14px;
+  padding: 9px 12px;
   border-radius: var(--radius-sm);
   transition: background-color 150ms var(--ease), color 150ms var(--ease);
 }
 
 .app-nav a:hover {
-  background: var(--surface-soft);
-  color: var(--ink);
+  background: var(--sidebar-surface);
+  color: var(--sidebar-text);
 }
 
 .app-nav a.active {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--sidebar-surface);
+  color: #FFFFFF;
+}
+
+.app-logout {
+  margin-top: auto;
+  background: transparent;
+  border: 1px solid var(--sidebar-border);
+  color: var(--sidebar-text-dim);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 150ms var(--ease), color 150ms var(--ease);
+}
+
+.app-logout:hover {
+  border-color: var(--sidebar-text-dim);
+  color: var(--sidebar-text);
 }
 
 .app-main {
   flex: 1;
-  padding: 28px 28px 48px;
-  max-width: 1400px;
+  min-width: 0;
+  padding: 28px 32px 48px;
+  max-width: 1320px;
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;

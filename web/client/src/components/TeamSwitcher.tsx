@@ -23,7 +23,7 @@ export default function TeamSwitcher() {
     <div className="team-switcher" ref={ref}>
       <button className="team-switcher-trigger" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <span className="team-switcher-name">{currentTeam.name}</span>
-        <span className={`badge-role${currentTeam.role === 'Admin' ? ' role-admin' : ''}`}>{currentTeam.role}</span>
+        <span className={`badge-role role-${currentTeam.role.toLowerCase()}`}>{currentTeam.role}</span>
         <span className="team-switcher-chevron">⌄</span>
       </button>
 

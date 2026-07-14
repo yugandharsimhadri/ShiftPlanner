@@ -39,6 +39,8 @@ public static class ImportEndpoints
 
             var tracks = await db.Tracks.Where(t => t.TeamId == teamId).ToListAsync();
             var subtracks = await db.Subtracks.Where(s => s.TeamId == teamId).ToListAsync();
+            var jobRoles = await db.JobRoles.Where(r => r.TeamId == teamId).ToListAsync();
+            var locations = await db.Locations.Where(l => l.TeamId == teamId).ToListAsync();
 
             // Design choice: validate every row first; commit only the rows that pass validation
             // (row-level partial commit), and report the rest as per-row errors.
@@ -110,6 +112,30 @@ public static class ImportEndpoints
                     }
                 }
 
+                var roleName = row.GetValueOrDefault("Role", "").Trim();
+                JobRole? jobRole = null;
+                if (!string.IsNullOrWhiteSpace(roleName))
+                {
+                    jobRole = jobRoles.FirstOrDefault(r => string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase));
+                    if (jobRole is null)
+                    {
+                        errors.Add(new ImportRowError(rowNum, $"Role '{roleName}' not found. Add it under Settings first."));
+                        continue;
+                    }
+                }
+
+                var locationName = row.GetValueOrDefault("Location", "").Trim();
+                Location? location = null;
+                if (!string.IsNullOrWhiteSpace(locationName))
+                {
+                    location = locations.FirstOrDefault(l => string.Equals(l.Name, locationName, StringComparison.OrdinalIgnoreCase));
+                    if (location is null)
+                    {
+                        errors.Add(new ImportRowError(rowNum, $"Location '{locationName}' not found. Add it under Settings first."));
+                        continue;
+                    }
+                }
+
                 var person = new Person
                 {
                     Name = name,
@@ -118,14 +144,13 @@ public static class ImportEndpoints
                     Notes = string.IsNullOrWhiteSpace(row.GetValueOrDefault("Notes", "")) ? null : row["Notes"].Trim(),
                     CreatedByUserId = ctx.UserId,
                 };
-                var location = row.GetValueOrDefault("Location", "").Trim();
                 var member = new TeamMember
                 {
                     TeamId = teamId,
                     TrackId = track.Id,
                     SubtrackId = subtrack?.Id,
-                    RoleTitle = row.GetValueOrDefault("Role", "").Trim(),
-                    Location = string.IsNullOrWhiteSpace(location) ? null : location,
+                    JobRoleId = jobRole?.Id,
+                    LocationId = location?.Id,
                     EmploymentType = employmentType,
                     JoinDate = joinDate,
                     Status = status,
