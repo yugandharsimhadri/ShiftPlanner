@@ -1,0 +1,28 @@
+.manager-dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.manager-team-section {
+  margin-top: 24px;
+}
+
+.manager-team-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.manager-team-heading h3 {
+  font-size: 16px;
+}
+
+.manager-team-heading .track-count {
+  margin-left: auto;
+}
+
+.availability-card {
+  padding: 8px 16px;
+}

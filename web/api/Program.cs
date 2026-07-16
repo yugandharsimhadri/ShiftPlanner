@@ -93,6 +93,9 @@ app.MapExportEndpoints();
 app.MapImportEndpoints();
 app.MapCompOffsEndpoints();
 app.MapReportsEndpoints();
+app.MapAvailabilityEndpoints();
+app.MapProfileEndpoints();
+app.MapManagerEndpoints();
 
 app.MapFallbackToFile("index.html");
 

@@ -8,6 +8,9 @@ import Roster from './pages/Roster'
 import TeamMembers from './pages/TeamMembers'
 import Settings from './pages/Settings'
 import Reports from './pages/Reports'
+import Live from './pages/Live'
+import ManagerDashboard from './pages/ManagerDashboard'
+import Profile from './pages/Profile'
 
 export default function App() {
   return (
@@ -17,9 +20,12 @@ export default function App() {
       <Route path="/select-team" element={<SelectTeam />} />
       <Route element={<Layout />}>
         <Route path="/" element={<Roster />} />
+        <Route path="/live" element={<Live />} />
+        <Route path="/manager" element={<ManagerDashboard />} />
         <Route path="/members" element={<TeamMembers />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="/profile" element={<Profile />} />
       </Route>
     </Routes>
   )

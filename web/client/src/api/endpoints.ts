@@ -9,15 +9,22 @@ import type {
   ImportResult,
   JobRole,
   Location,
+  ManagerAssignment,
+  ManagerTeam,
+  ManagerTeamAvailability,
   Me,
+  PersonSearchResult,
+  Profile,
   RosterResponse,
   ShiftType,
   Subtrack,
   TeamMember,
+  TeamMemberAvailability,
   TeamSettings,
   TeamSummary,
   Track,
   UnassignedPerson,
+  UpdateProfileInput,
   UpdateTeamMemberInput,
   UpdateTeamSettingsInput,
   UtilizationRow,
@@ -294,4 +301,59 @@ export async function downloadExport(kind: 'excel' | 'csv', year: number, month:
   link.click()
   link.remove()
   window.URL.revokeObjectURL(url)
+}
+
+// --- Live availability -------------------------------------------------------------
+
+export async function getTeamAvailability(): Promise<TeamMemberAvailability[]> {
+  const res = await api.get('/api/teams/current/availability')
+  return res.data
+}
+
+export async function updateMyAvailability(isAvailable: boolean): Promise<TeamMemberAvailability> {
+  const res = await api.patch('/api/teams/current/members/me/availability', { isAvailable })
+  return res.data
+}
+
+// --- Profile -------------------------------------------------------------------
+
+export async function getProfile(): Promise<Profile> {
+  const res = await api.get('/api/me/profile')
+  return res.data
+}
+
+export async function updateProfile(payload: UpdateProfileInput): Promise<Profile> {
+  const res = await api.patch('/api/me/profile', payload)
+  return res.data
+}
+
+// --- Managers ------------------------------------------------------------------
+
+export async function getTeamManagers(): Promise<ManagerAssignment[]> {
+  const res = await api.get('/api/teams/current/managers')
+  return res.data
+}
+
+export async function searchPeopleByPhone(phone: string): Promise<PersonSearchResult[]> {
+  const res = await api.get('/api/teams/current/managers/search', { params: { phone } })
+  return res.data
+}
+
+export async function grantManager(personId: string): Promise<ManagerAssignment> {
+  const res = await api.post('/api/teams/current/managers', { personId })
+  return res.data
+}
+
+export async function revokeManager(id: number): Promise<void> {
+  await api.delete(`/api/teams/current/managers/${id}`)
+}
+
+export async function getManagerTeams(): Promise<ManagerTeam[]> {
+  const res = await api.get('/api/manager/teams')
+  return res.data
+}
+
+export async function getManagerAvailability(): Promise<ManagerTeamAvailability[]> {
+  const res = await api.get('/api/manager/availability')
+  return res.data
 }

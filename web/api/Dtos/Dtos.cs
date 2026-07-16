@@ -123,7 +123,7 @@ public record UpdateMemberRoleDto(TeamRole AccessRole);
 public record SetCoLeadDto(bool IsCoLead);
 
 // The caller's own TeamMember record on the current team.
-public record MeDto(string Name, string Code, TeamRole Role, bool IsTeamLead, bool IsCoLead);
+public record MeDto(Guid PersonId, string Name, string Code, TeamRole Role, bool IsTeamLead, bool IsCoLead);
 
 public record TeamSettingsDto(
     string Name,
@@ -168,6 +168,55 @@ public record CompOffEntryDto(
 );
 
 public record UseCompOffDto(DateOnly UsedDate);
+
+// --- Live availability ---------------------------------------------------------
+// Independent of the planned roster entirely — a member's self-reported "free right
+// now" status, which auto-expires per their own configured window (see
+// AvailabilityService). Visible to every team member, not just admins.
+
+public record TeamMemberAvailabilityDto(
+    int TeamMemberId,
+    Guid PersonId,
+    string Name,
+    string Code,
+    string? TrackName,
+    bool IsAvailable,
+    DateTimeOffset? AvailableSince,
+    string? Timezone
+);
+
+public record UpdateAvailabilityDto(bool IsAvailable);
+
+// --- Profile ---------------------------------------------------------------------
+// Person-level (not team-scoped) — timezone and the availability auto-expiry window,
+// both self-service. AutoExpiryHours is always the *effective* value (override if set,
+// otherwise the timezone-based default); AutoExpiryHoursOverride is the raw stored value.
+
+public record ProfileDto(
+    string Name,
+    string? Email,
+    string Phone,
+    string? Timezone,
+    int AutoExpiryHours,
+    int? AutoExpiryHoursOverride
+);
+
+public record UpdateProfileDto(string? Timezone, int? AutoExpiryHoursOverride);
+
+// --- Managers ----------------------------------------------------------------------
+// A Manager has read-only oversight of the live-availability dashboard across every
+// team they're assigned to, without gaining roster-edit rights on teams that aren't
+// theirs (see ManagerAssignment).
+
+public record PersonSearchResultDto(Guid Id, string Name, string Phone, string? Email);
+
+public record GrantManagerDto(Guid PersonId);
+
+public record ManagerAssignmentDto(int Id, Guid PersonId, string PersonName, string PersonPhone, int TeamId, string TeamName);
+
+public record ManagerTeamAvailabilityDto(int TeamId, string TeamName, List<TeamMemberAvailabilityDto> Members);
+
+public record ManagerTeamDto(int Id, string Name);
 
 // --- Reports -------------------------------------------------------------------
 

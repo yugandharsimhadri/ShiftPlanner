@@ -14,8 +14,12 @@ import {
   getJobRoles,
   getLocations,
   getShiftTypes,
+  getTeamManagers,
   getTeamSettings,
   getTracks,
+  grantManager,
+  revokeManager,
+  searchPeopleByPhone,
   updateShiftType,
   updateTeamSettings,
   updateTrack,
@@ -31,6 +35,7 @@ export default function Settings() {
       <TracksSection />
       <LocationsSection />
       <JobRolesSection />
+      <ManagersSection />
       <ShiftTypesSection />
     </div>
   )
@@ -377,6 +382,84 @@ function JobRolesSection() {
       onDelete={(id) => deleteMutation.mutate(id)}
       placeholder="+ role"
     />
+  )
+}
+
+// Grants read-only oversight of this team's live-availability dashboard to someone
+// already known to this admin — never a full roster/edit access, and never an
+// arbitrary cross-tenant lookup (the search endpoint itself enforces that scope).
+function ManagersSection() {
+  const { currentRole } = useTeam()
+  const isAdmin = currentRole === 'Admin'
+  const queryClient = useQueryClient()
+  const [phone, setPhone] = useState('')
+
+  const { data: managers } = useQuery({ queryKey: ['team-managers'], queryFn: getTeamManagers, enabled: isAdmin })
+  const { data: results } = useQuery({
+    queryKey: ['managers-search', phone],
+    queryFn: () => searchPeopleByPhone(phone),
+    enabled: isAdmin && phone.trim().length >= 3,
+  })
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['team-managers'] })
+  const grantMutation = useMutation({
+    mutationFn: grantManager,
+    onSuccess: () => { setPhone(''); invalidate() },
+  })
+  const revokeMutation = useMutation({ mutationFn: revokeManager, onSuccess: invalidate })
+
+  if (!isAdmin) return null
+
+  const grantedIds = new Set((managers ?? []).map((m) => m.personId))
+
+  return (
+    <section className="card settings-section">
+      <h2>Managers</h2>
+      <p className="field-hint">
+        People who can see this team's live availability across all the teams they oversee — without gaining roster access here.
+      </p>
+
+      <div className="subtrack-list">
+        {managers?.map((m) => (
+          <span className="pill subtrack-pill" key={m.id}>
+            {m.personName} · {m.personPhone}
+            <button className="pill-remove" onClick={() => revokeMutation.mutate(m.id)} aria-label={`Remove ${m.personName} as manager`}>
+              ×
+            </button>
+          </span>
+        ))}
+        {managers?.length === 0 && <p className="field-hint">No managers yet.</p>}
+      </div>
+
+      <div className="field" style={{ marginTop: 14 }}>
+        <label htmlFor="manager-search">Add a manager by phone number</label>
+        <input
+          id="manager-search"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Search by phone (min 3 digits)"
+        />
+        {results && results.length > 0 && (
+          <div className="team-checklist" style={{ marginTop: 8 }}>
+            {results.map((p) => (
+              <div key={p.id} className="unassigned-row" style={{ borderTop: 'none', padding: '4px 0' }}>
+                <span>{p.name} · {p.phone}</span>
+                <button
+                  className="btn-secondary"
+                  disabled={grantedIds.has(p.id) || grantMutation.isPending}
+                  onClick={() => grantMutation.mutate(p.id)}
+                >
+                  {grantedIds.has(p.id) ? 'Already a manager' : 'Add as manager'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {phone.trim().length >= 3 && results?.length === 0 && (
+          <p className="field-hint">No one found with that phone number among people you already manage.</p>
+        )}
+      </div>
+    </section>
   )
 }
 

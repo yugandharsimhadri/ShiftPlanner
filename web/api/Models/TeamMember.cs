@@ -54,5 +54,12 @@ public class TeamMember
     public bool IsTeamLead { get; set; }
     public bool IsCoLead { get; set; }
 
+    // Live availability — separate from the planned roster entirely. A member flips this
+    // on themselves when they're actually free right now; AvailableSince anchors the
+    // auto-expiry window (see AvailabilityService). Raw values here can be stale past
+    // expiry — always read through AvailabilityService for the effective state.
+    public bool IsAvailable { get; set; }
+    public DateTimeOffset? AvailableSince { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

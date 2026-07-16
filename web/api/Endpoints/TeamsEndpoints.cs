@@ -126,7 +126,7 @@ public static class TeamsEndpoints
                 .FirstOrDefaultAsync(m => m.TeamId == ctx.TeamId && m.Person!.UserId == ctx.UserId);
 
             if (member is null) return Results.NotFound();
-            return Results.Ok(new MeDto(member.Person!.Name, member.Code, member.AccessRole, member.IsTeamLead, member.IsCoLead));
+            return Results.Ok(new MeDto(member.PersonId, member.Person!.Name, member.Code, member.AccessRole, member.IsTeamLead, member.IsCoLead));
         }).RequireTeamMember();
 
         // A suggested next code (e.g. "EMP-004") for the add-member form to pre-fill —

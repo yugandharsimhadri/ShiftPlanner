@@ -1,0 +1,76 @@
+.availability-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.availability-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.availability-row:last-child {
+  border-bottom: none;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line-strong);
+  flex-shrink: 0;
+}
+
+.status-dot.on {
+  background: var(--success);
+  box-shadow: 0 0 0 3px var(--success-soft);
+}
+
+.availability-name {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.availability-meta {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+.availability-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.availability-badge.on {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.availability-badge.off {
+  background: var(--surface-soft);
+  color: var(--ink-faint);
+  border: 1px solid var(--line-strong);
+}
+
+.availability-time {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  min-width: 60px;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .availability-row {
+    grid-template-columns: auto 1fr auto;
+  }
+  .availability-time {
+    display: none;
+  }
+}

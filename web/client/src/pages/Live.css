@@ -1,0 +1,32 @@
+.live-page {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.self-toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  margin: 18px 0 22px;
+}
+
+.self-toggle-card.is-on {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+
+.self-toggle-label {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+
+.availability-card {
+  padding: 8px 16px;
+}

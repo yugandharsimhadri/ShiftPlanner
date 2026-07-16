@@ -1,4 +1,6 @@
 import { NavLink, Outlet, Navigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { getManagerTeams } from '../api/endpoints'
 import { useAuth } from '../auth/AuthContext'
 import { useTeam } from '../team/TeamContext'
 import TeamSwitcher from './TeamSwitcher'
@@ -7,6 +9,7 @@ import './Layout.css'
 export default function Layout() {
   const { isAuthenticated, logout } = useAuth()
   const { teams, isLoading, currentTeam } = useTeam()
+  const { data: managerTeams } = useQuery({ queryKey: ['manager', 'teams'], queryFn: getManagerTeams, enabled: isAuthenticated })
 
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (isLoading) return <div className="app-loading">Loading your teams…</div>
@@ -25,6 +28,14 @@ export default function Layout() {
           <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : '')}>
             Roster
           </NavLink>
+          <NavLink to="/live" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Live
+          </NavLink>
+          {managerTeams && managerTeams.length > 0 && (
+            <NavLink to="/manager" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Manager view
+            </NavLink>
+          )}
           <NavLink to="/members" className={({ isActive }) => (isActive ? 'active' : '')}>
             Team Members
           </NavLink>
@@ -35,6 +46,9 @@ export default function Layout() {
             Reports
           </NavLink>
         </nav>
+        <NavLink to="/profile" className="app-profile-link">
+          My profile
+        </NavLink>
         <button className="app-logout" onClick={logout}>
           Log out
         </button>

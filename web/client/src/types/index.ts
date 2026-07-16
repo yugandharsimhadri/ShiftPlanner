@@ -141,6 +141,7 @@ export interface AssignPersonToTeamInput {
 }
 
 export interface Me {
+  personId: string
   name: string
   code: string
   role: TeamRole
@@ -229,6 +230,69 @@ export interface CompOffEntry {
   earnedDate: string
   status: CompOffStatus
   usedDate: string | null
+}
+
+// --- Live availability -------------------------------------------------------------
+// Independent of the planned roster — a member's self-reported "free right now"
+// status, visible to every team member and auto-expiring per their own profile setting.
+
+export interface TeamMemberAvailability {
+  teamMemberId: number
+  personId: string
+  name: string
+  code: string
+  trackName: string | null
+  isAvailable: boolean
+  availableSince: string | null
+  timezone: string | null
+}
+
+// --- Profile -------------------------------------------------------------------
+
+export interface Profile {
+  name: string
+  email: string | null
+  phone: string
+  timezone: string | null
+  autoExpiryHours: number
+  autoExpiryHoursOverride: number | null
+}
+
+export interface UpdateProfileInput {
+  timezone?: string | null
+  autoExpiryHoursOverride?: number | null
+}
+
+// --- Managers ------------------------------------------------------------------
+// A Manager has read-only oversight of the live-availability dashboard across every
+// team they're assigned to — separate from AccessRole, so it doesn't grant roster
+// edit rights.
+
+export interface PersonSearchResult {
+  id: string
+  name: string
+  phone: string
+  email: string | null
+}
+
+export interface ManagerAssignment {
+  id: number
+  personId: string
+  personName: string
+  personPhone: string
+  teamId: number
+  teamName: string
+}
+
+export interface ManagerTeam {
+  id: number
+  name: string
+}
+
+export interface ManagerTeamAvailability {
+  teamId: number
+  teamName: string
+  members: TeamMemberAvailability[]
 }
 
 // --- Reports -------------------------------------------------------------------

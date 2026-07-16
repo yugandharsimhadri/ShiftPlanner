@@ -20,6 +20,7 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
     public DbSet<RosterEntry> RosterEntries => Set<RosterEntry>();
     public DbSet<Holiday> Holidays => Set<Holiday>();
     public DbSet<CompOffEntry> CompOffEntries => Set<CompOffEntry>();
+    public DbSet<ManagerAssignment> ManagerAssignments => Set<ManagerAssignment>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -96,5 +97,21 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
             .WithMany()
             .HasForeignKey(c => c.TeamMemberId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ManagerAssignment>()
+            .HasOne(a => a.Person)
+            .WithMany()
+            .HasForeignKey(a => a.PersonId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ManagerAssignment>()
+            .HasOne(a => a.Team)
+            .WithMany()
+            .HasForeignKey(a => a.TeamId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<ManagerAssignment>()
+            .HasIndex(a => new { a.PersonId, a.TeamId })
+            .IsUnique();
     }
 }
