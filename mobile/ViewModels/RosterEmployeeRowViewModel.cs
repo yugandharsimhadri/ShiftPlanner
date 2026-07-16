@@ -1,11 +1,11 @@
 namespace ShiftPlanner.Mobile.ViewModels;
 
-/// <summary>One employee's row in the Roster tab's day view.</summary>
+/// <summary>One team member's row in the Roster tab's day view.</summary>
 public sealed class RosterEmployeeRowViewModel
 {
-    public required Guid EmployeeId { get; init; }
-    public required string EmployeeCode { get; init; }
-    public required string EmployeeName { get; init; }
+    public required int TeamMemberId { get; init; }
+    public required string Code { get; init; }
+    public required string Name { get; init; }
     public string? ShiftCode { get; init; }
     public string ShiftLabel { get; init; } = "Off";
     public bool HasShift { get; init; }

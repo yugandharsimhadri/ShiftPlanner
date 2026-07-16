@@ -103,9 +103,9 @@ public partial class TeamGateViewModel : ObservableObject
         try
         {
             var me = await _api.GetMeAsync();
-            if (!string.IsNullOrWhiteSpace(me?.EmployeeCode))
+            if (!string.IsNullOrWhiteSpace(me?.Code))
             {
-                AppSettingsStore.EmployeeCode = me.EmployeeCode;
+                AppSettingsStore.MemberCode = me.Code;
             }
         }
         catch

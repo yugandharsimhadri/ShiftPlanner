@@ -8,13 +8,14 @@ namespace ShiftPlanner.Mobile.Services;
 public static class AppSettingsStore
 {
     private const string ApiBaseUrlKey = "shiftplanner.api_base_url";
-    private const string EmployeeCodeKey = "shiftplanner.employee_code";
+    private const string MemberCodeKey = "shiftplanner.member_code";
     private const string UserEmailKey = "shiftplanner.user_email";
     private const string CurrentTeamIdKey = "shiftplanner.current_team_id";
     private const string CurrentTeamNameKey = "shiftplanner.current_team_name";
     private const string CurrentTeamRoleKey = "shiftplanner.current_team_role";
 
-    private const string DefaultApiBaseUrl = "http://localhost:5000";
+    // 10.0.2.2 is the Android emulator's alias for the host machine's localhost.
+    private const string DefaultApiBaseUrl = "http://10.0.2.2:5080";
 
     /// <summary>Base address of the ShiftPlanner Web API, e.g. "http://192.168.1.50:5000".</summary>
     public static string ApiBaseUrl
@@ -24,19 +25,18 @@ public static class AppSettingsStore
     }
 
     /// <summary>
-    /// The signed-in person's own employee code on this team (e.g. "EMP-004"), so "My Shifts"
-    /// knows which roster entries are theirs. There's no server-side link between a login and
-    /// a roster row, so this is opt-in — until set, My Shifts shows an empty state pointing
-    /// here instead of guessing.
+    /// The signed-in person's own team member code on this team (e.g. "EMP-004"), so the
+    /// Roster's "Just me" filter knows which rows are theirs. This is set automatically from
+    /// GetMeAsync() right after picking a team, with this as a manual fallback.
     /// </summary>
-    public static string? EmployeeCode
+    public static string? MemberCode
     {
         get
         {
-            var value = Preferences.Default.Get(EmployeeCodeKey, string.Empty);
+            var value = Preferences.Default.Get(MemberCodeKey, string.Empty);
             return string.IsNullOrWhiteSpace(value) ? null : value;
         }
-        set => Preferences.Default.Set(EmployeeCodeKey, (value ?? string.Empty).Trim());
+        set => Preferences.Default.Set(MemberCodeKey, (value ?? string.Empty).Trim());
     }
 
     /// <summary>Email address used for the last successful login; shown on the Profile page.</summary>

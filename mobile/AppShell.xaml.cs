@@ -9,9 +9,9 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
 
-        // Pushed on top of the Employees tab (add/edit form) rather than being a tab itself —
-        // registered here since it's not in the TabBar markup above.
-        Routing.RegisterRoute("employeeform", typeof(EmployeeFormPage));
+        // Pushed on top of the Team Members tab (add/edit form) rather than being a tab
+        // itself — registered here since it's not in the TabBar markup above.
+        Routing.RegisterRoute("teammemberform", typeof(TeamMemberFormPage));
 
         Loaded += OnShellLoaded;
     }

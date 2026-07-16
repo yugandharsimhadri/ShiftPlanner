@@ -69,13 +69,13 @@
                         <Label
                             Grid.Row="0"
                             Grid.Column="0"
-                            Text="{Binding EmployeeName}"
+                            Text="{Binding Name}"
                             Style="{StaticResource ListTitleLabel}"
                             VerticalOptions="End" />
                         <Label
                             Grid.Row="1"
                             Grid.Column="0"
-                            Text="{Binding EmployeeCode}"
+                            Text="{Binding Code}"
                             Style="{StaticResource CaptionLabel}"
                             VerticalOptions="Start" />
                         <Border

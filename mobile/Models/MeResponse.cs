@@ -1,11 +1,15 @@
 namespace ShiftPlanner.Mobile.Models;
 
-/// <summary>The signed-in person's own membership on the current team, as returned by
-/// GET /api/teams/current/members/me.</summary>
+/// <summary>The signed-in person's own TeamMember record on the current team, as returned
+/// by GET /api/teams/current/members/me.</summary>
 public sealed class MeResponse
 {
-    public string Email { get; set; } = string.Empty;
+    public Guid PersonId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+
+    /// <summary>"Viewer", "Editor", or "Admin".</summary>
     public string Role { get; set; } = string.Empty;
-    public Guid? EmployeeId { get; set; }
-    public string? EmployeeCode { get; set; }
+    public bool IsTeamLead { get; set; }
+    public bool IsCoLead { get; set; }
 }

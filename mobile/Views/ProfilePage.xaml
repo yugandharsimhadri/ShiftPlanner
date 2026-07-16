@@ -39,17 +39,17 @@
 
             <Border Style="{StaticResource CardBorder}">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="MY EMPLOYEE CODE" Style="{StaticResource FieldLabel}" />
-                    <Entry Text="{Binding EmployeeCode}" Placeholder="e.g. EMP-004" />
+                    <Label Text="MY TEAM MEMBER CODE" Style="{StaticResource FieldLabel}" />
+                    <Entry Text="{Binding MemberCode}" Placeholder="e.g. EMP-004" />
                     <Label
-                        Text="Matches the Code on your roster record, so My Shifts knows which entries are yours. Ask your team admin if you're not sure what yours is."
+                        Text="Matches the Code on your team member record, so Roster's &quot;Just me&quot; filter knows which entries are yours. Ask your team admin if you're not sure what yours is."
                         Style="{StaticResource CaptionLabel}" />
                     <Button
                         Text="Save"
                         Style="{StaticResource GhostButton}"
                         FontSize="14"
                         HorizontalOptions="Start"
-                        Command="{Binding SaveEmployeeCodeCommand}" />
+                        Command="{Binding SaveMemberCodeCommand}" />
                 </VerticalStackLayout>
             </Border>
 

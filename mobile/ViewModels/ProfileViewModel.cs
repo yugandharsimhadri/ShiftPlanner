@@ -19,7 +19,7 @@ public partial class ProfileViewModel : ObservableObject
     private string teamRole = string.Empty;
 
     [ObservableProperty]
-    private string employeeCode = string.Empty;
+    private string memberCode = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasStatusMessage))]
@@ -40,7 +40,7 @@ public partial class ProfileViewModel : ObservableObject
         ApiBaseUrl = AppSettingsStore.ApiBaseUrl;
         TeamName = AppSettingsStore.CurrentTeamName ?? "No team selected";
         TeamRole = AppSettingsStore.CurrentTeamRole ?? "";
-        EmployeeCode = AppSettingsStore.EmployeeCode ?? string.Empty;
+        MemberCode = AppSettingsStore.MemberCode ?? string.Empty;
         StatusMessage = null;
     }
 
@@ -58,12 +58,12 @@ public partial class ProfileViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void SaveEmployeeCode()
+    private void SaveMemberCode()
     {
-        AppSettingsStore.EmployeeCode = EmployeeCode;
-        StatusMessage = string.IsNullOrWhiteSpace(EmployeeCode)
-            ? "Cleared — My Shifts will be empty until this is set."
-            : "Saved — My Shifts will now show that employee's roster.";
+        AppSettingsStore.MemberCode = MemberCode;
+        StatusMessage = string.IsNullOrWhiteSpace(MemberCode)
+            ? "Cleared — Roster's \"Just me\" filter will be empty until this is set."
+            : "Saved — Roster's \"Just me\" filter will now show your shifts.";
     }
 
     [RelayCommand]

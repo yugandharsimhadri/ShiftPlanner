@@ -107,44 +107,44 @@ public partial class RosterViewModel : ObservableObject
             return;
         }
 
-        var myCode = AppSettingsStore.EmployeeCode;
-        var entriesForDay = _monthData.Entries.Where(e => e.Date == _selectedDate).ToDictionary(e => e.EmployeeId);
+        var myCode = AppSettingsStore.MemberCode;
+        var entriesForDay = _monthData.Entries.Where(e => e.Date == _selectedDate).ToDictionary(e => e.TeamMemberId);
         var shiftsByCode = _monthData.ShiftTypes.ToDictionary(s => s.Code);
 
-        var employees = _monthData.Employees.AsEnumerable();
+        var members = _monthData.TeamMembers.AsEnumerable();
         if (ShowJustMine && !string.IsNullOrWhiteSpace(myCode))
         {
-            employees = employees.Where(e => string.Equals(e.Code, myCode, StringComparison.OrdinalIgnoreCase));
+            members = members.Where(m => string.Equals(m.Code, myCode, StringComparison.OrdinalIgnoreCase));
         }
 
-        var rows = employees
-            .Select(emp =>
+        var rows = members
+            .Select(member =>
             {
-                entriesForDay.TryGetValue(emp.Id, out var entry);
+                entriesForDay.TryGetValue(member.Id, out var entry);
                 var shiftCode = entry?.ShiftCode;
                 shiftsByCode.TryGetValue(shiftCode ?? string.Empty, out var shift);
                 var (fg, bg) = ShiftStyle.Resolve(shiftCode, shift?.Color);
 
                 return new
                 {
-                    TrackName = emp.Track?.Name ?? "Unassigned",
+                    TrackName = member.Track?.Name ?? "Unassigned",
                     Row = new RosterEmployeeRowViewModel
                     {
-                        EmployeeId = emp.Id,
-                        EmployeeCode = emp.Code,
-                        EmployeeName = emp.Name,
+                        TeamMemberId = member.Id,
+                        Code = member.Code,
+                        Name = member.Person?.Name ?? member.Code,
                         ShiftCode = shiftCode,
                         ShiftLabel = shift?.Name ?? shiftCode ?? "Off",
                         HasShift = !string.IsNullOrWhiteSpace(shiftCode),
                         ChipForeground = fg,
                         ChipBackground = bg,
-                        IsMe = !string.IsNullOrWhiteSpace(myCode) && string.Equals(emp.Code, myCode, StringComparison.OrdinalIgnoreCase),
+                        IsMe = !string.IsNullOrWhiteSpace(myCode) && string.Equals(member.Code, myCode, StringComparison.OrdinalIgnoreCase),
                     }
                 };
             })
             .GroupBy(x => x.TrackName)
             .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new RosterTrackGroup(g.Key, g.Select(x => x.Row).OrderBy(r => r.EmployeeName, StringComparer.OrdinalIgnoreCase)));
+            .Select(g => new RosterTrackGroup(g.Key, g.Select(x => x.Row).OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase)));
 
         foreach (var group in rows)
         {
@@ -162,7 +162,7 @@ public partial class RosterViewModel : ObservableObject
 
         var options = _monthData.ShiftTypes.Select(s => s.Code).ToArray();
         var choice = await Shell.Current.DisplayActionSheet(
-            $"Assign shift — {row.EmployeeName}, {DateLabel}", "Cancel", "Clear", options);
+            $"Assign shift — {row.Name}, {DateLabel}", "Cancel", "Clear", options);
 
         if (string.IsNullOrWhiteSpace(choice) || choice == "Cancel")
         {
@@ -173,7 +173,7 @@ public partial class RosterViewModel : ObservableObject
 
         try
         {
-            await _api.UpsertRosterEntryAsync(row.EmployeeId, _selectedDate, shiftCode);
+            await _api.UpsertRosterEntryAsync(row.TeamMemberId, _selectedDate, shiftCode);
             await LoadAsync();
         }
         catch (Exception ex)
@@ -195,7 +195,7 @@ public partial class RosterViewModel : ObservableObject
 
         var confirmed = await Shell.Current.DisplayAlert(
             "Copy month forward",
-            $"Copy {sourceMonth:MMMM yyyy} onto {targetMonth:MMMM yyyy}, matching each entry to the same weekday? Employees marked inactive are skipped.",
+            $"Copy {sourceMonth:MMMM yyyy} onto {targetMonth:MMMM yyyy}, matching each entry to the same weekday? Team members marked inactive are skipped.",
             "Copy", "Cancel");
         if (!confirmed)
         {
@@ -220,7 +220,7 @@ public partial class RosterViewModel : ObservableObject
             var summary = result.Flagged.Count == 0
                 ? $"Copied {result.CopiedCount} entries."
                 : $"Copied {result.CopiedCount} entries. {result.Flagged.Count} need a look: " +
-                  string.Join("; ", result.Flagged.Take(5).Select(f => $"{f.EmployeeName} {f.Date:MMM d} ({f.Reason})"));
+                  string.Join("; ", result.Flagged.Take(5).Select(f => $"{f.MemberName} {f.Date:MMM d} ({f.Reason})"));
             await Shell.Current.DisplayAlert("Copy complete", summary, "OK");
         }
         catch (Exception ex)

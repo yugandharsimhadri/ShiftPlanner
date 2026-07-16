@@ -2,11 +2,11 @@ using ShiftPlanner.Mobile.ViewModels;
 
 namespace ShiftPlanner.Mobile.Views;
 
-public partial class EmployeesPage : ContentPage
+public partial class TeamMemberFormPage : ContentPage
 {
-    private readonly EmployeesViewModel _viewModel;
+    private readonly TeamMemberFormViewModel _viewModel;
 
-    public EmployeesPage(EmployeesViewModel viewModel)
+    public TeamMemberFormPage(TeamMemberFormViewModel viewModel)
     {
         InitializeComponent();
         _viewModel = viewModel;

@@ -30,14 +30,11 @@
         <Tab Title="Roster" Route="roster">
             <ShellContent ContentTemplate="{DataTemplate views:RosterPage}" />
         </Tab>
-        <Tab Title="Employees" Route="employees">
-            <ShellContent ContentTemplate="{DataTemplate views:EmployeesPage}" />
+        <Tab Title="Team Members" Route="members">
+            <ShellContent ContentTemplate="{DataTemplate views:TeamMembersPage}" />
         </Tab>
         <Tab Title="Settings" Route="settings">
             <ShellContent ContentTemplate="{DataTemplate views:SettingsPage}" />
-        </Tab>
-        <Tab Title="Team" Route="team">
-            <ShellContent ContentTemplate="{DataTemplate views:TeamPage}" />
         </Tab>
         <Tab Title="Profile" Route="profile">
             <ShellContent ContentTemplate="{DataTemplate views:ProfilePage}" />

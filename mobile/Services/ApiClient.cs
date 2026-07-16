@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using ShiftPlanner.Mobile.Models;
+using Location = ShiftPlanner.Mobile.Models.Location;
 
 namespace ShiftPlanner.Mobile.Services;
 
@@ -75,7 +76,7 @@ public sealed class ApiClient
         return result;
     }
 
-    /// <summary>The caller's own role and linked employee on whichever team is currently
+    /// <summary>The caller's own role and TeamMember record on whichever team is currently
     /// selected (AppSettingsStore.CurrentTeamId — set this before calling).</summary>
     public async Task<MeResponse?> GetMeAsync(CancellationToken cancellationToken = default)
     {
@@ -86,9 +87,9 @@ public sealed class ApiClient
         return await response.Content.ReadFromJsonAsync<MeResponse>(JsonOptions, cancellationToken);
     }
 
-    /// <summary>The whole team's roster for one month — entries, employees, and shift types.
+    /// <summary>The whole team's roster for one month — entries, team members, and shift types.
     /// The Roster tab derives its day view, "Just me" filter, and shift-assign sheet from this;
-    /// there's no per-day or per-employee filter server-side.</summary>
+    /// there's no per-day or per-team-member filter server-side.</summary>
     public async Task<RosterResponse> GetRosterMonthAsync(int year, int month, CancellationToken cancellationToken = default)
     {
         var route = $"{ApiRoutes.Roster}?year={year}&month={month}";
@@ -100,11 +101,11 @@ public sealed class ApiClient
         return result ?? new RosterResponse();
     }
 
-    /// <summary>Assigns, changes, or clears (shiftCode: null) one employee's shift on one date.
+    /// <summary>Assigns, changes, or clears (shiftCode: null) one team member's shift on one date.
     /// Requires Editor or Admin on the current team — the server returns 403 otherwise.</summary>
-    public async Task UpsertRosterEntryAsync(Guid employeeId, DateOnly date, string? shiftCode, CancellationToken cancellationToken = default)
+    public async Task UpsertRosterEntryAsync(int teamMemberId, DateOnly date, string? shiftCode, CancellationToken cancellationToken = default)
     {
-        var body = new RosterEntryUpsertRequest { EmployeeId = employeeId, Date = date, ShiftCode = shiftCode };
+        var body = new RosterEntryUpsertRequest { TeamMemberId = teamMemberId, Date = date, ShiftCode = shiftCode };
         var request = await CreateRequestAsync(HttpMethod.Put, ApiRoutes.RosterEntry, attachAuth: true, body: body);
         using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response);
@@ -112,7 +113,7 @@ public sealed class ApiClient
 
     /// <summary>Copies a source month's roster onto a target month, by weekday pattern or exact
     /// date. Returns how many entries copied and which need a human look (holiday, inactive
-    /// employee, existing leave).</summary>
+    /// team member, existing leave).</summary>
     public async Task<CopyForwardResult> CopyForwardAsync(CopyForwardRequestBody body, CancellationToken cancellationToken = default)
     {
         var request = await CreateRequestAsync(HttpMethod.Post, ApiRoutes.RosterCopyForward, attachAuth: true, body: body);
@@ -132,55 +133,57 @@ public sealed class ApiClient
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
 
-    // ---- Employees ----
+    // ---- Team members ----
 
-    public async Task<List<Employee>> GetEmployeesAsync(CancellationToken cancellationToken = default)
+    public async Task<List<TeamMember>> GetTeamMembersAsync(CancellationToken cancellationToken = default)
     {
-        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.Employees, attachAuth: true);
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.Members, attachAuth: true);
         using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response);
-        return await response.Content.ReadFromJsonAsync<List<Employee>>(JsonOptions, cancellationToken) ?? new List<Employee>();
+        return await response.Content.ReadFromJsonAsync<List<TeamMember>>(JsonOptions, cancellationToken) ?? new List<TeamMember>();
     }
 
-    public async Task<Employee?> GetEmployeeAsync(Guid id, CancellationToken cancellationToken = default)
+    /// <summary>A suggested next team member code (e.g. "EMP-004") to pre-fill the add form.</summary>
+    public async Task<string> GetNextTeamMemberCodeAsync(CancellationToken cancellationToken = default)
     {
-        var request = await CreateRequestAsync(HttpMethod.Get, $"{ApiRoutes.Employees}/{id}", attachAuth: true);
-        using var response = await SendAsync(request, cancellationToken);
-        if (!response.IsSuccessStatusCode) return null;
-        return await response.Content.ReadFromJsonAsync<Employee>(JsonOptions, cancellationToken);
-    }
-
-    /// <summary>A suggested next employee code (e.g. "EMP-004") to pre-fill the add form.</summary>
-    public async Task<string> GetNextEmployeeCodeAsync(CancellationToken cancellationToken = default)
-    {
-        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.EmployeesNextCode, attachAuth: true);
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.MembersNextCode, attachAuth: true);
         using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response);
         var doc = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions, cancellationToken);
         return doc.TryGetProperty("code", out var code) ? code.GetString() ?? string.Empty : string.Empty;
     }
 
-    public async Task<Employee> CreateEmployeeAsync(EmployeeInput input, CancellationToken cancellationToken = default)
+    public async Task<TeamMember> CreateTeamMemberAsync(CreateTeamMemberRequest input, CancellationToken cancellationToken = default)
     {
-        var request = await CreateRequestAsync(HttpMethod.Post, ApiRoutes.Employees, attachAuth: true, body: input);
+        var request = await CreateRequestAsync(HttpMethod.Post, ApiRoutes.Members, attachAuth: true, body: input);
         using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response);
-        return await response.Content.ReadFromJsonAsync<Employee>(JsonOptions, cancellationToken)
-            ?? throw new ApiException("The server returned an empty response creating the employee.");
+        return await response.Content.ReadFromJsonAsync<TeamMember>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response creating the team member.");
     }
 
-    public async Task<Employee> UpdateEmployeeAsync(Guid id, EmployeeInput input, CancellationToken cancellationToken = default)
+    public async Task<TeamMember> UpdateTeamMemberAsync(int id, UpdateTeamMemberRequest input, CancellationToken cancellationToken = default)
     {
-        var request = await CreateRequestAsync(HttpMethod.Put, $"{ApiRoutes.Employees}/{id}", attachAuth: true, body: input);
+        var request = await CreateRequestAsync(HttpMethod.Put, $"{ApiRoutes.Members}/{id}", attachAuth: true, body: input);
         using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response);
-        return await response.Content.ReadFromJsonAsync<Employee>(JsonOptions, cancellationToken)
-            ?? throw new ApiException("The server returned an empty response updating the employee.");
+        return await response.Content.ReadFromJsonAsync<TeamMember>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response updating the team member.");
     }
 
-    public async Task DeleteEmployeeAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<TeamMember> UpdateMemberRoleAsync(int id, string accessRole, CancellationToken cancellationToken = default)
     {
-        var request = await CreateRequestAsync(HttpMethod.Delete, $"{ApiRoutes.Employees}/{id}", attachAuth: true);
+        var body = new UpdateMemberRoleRequest { AccessRole = accessRole };
+        var request = await CreateRequestAsync(HttpMethod.Patch, $"{ApiRoutes.Members}/{id}/role", attachAuth: true, body: body);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<TeamMember>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response changing the role.");
+    }
+
+    public async Task RemoveTeamMemberAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Delete, $"{ApiRoutes.Members}/{id}", attachAuth: true);
         using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response);
     }
@@ -227,6 +230,24 @@ public sealed class ApiClient
         await EnsureSuccessAsync(response);
     }
 
+    // ---- Job roles / Locations (master lists) ----
+
+    public async Task<List<JobRole>> GetJobRolesAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.JobRoles, attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<JobRole>>(JsonOptions, cancellationToken) ?? new List<JobRole>();
+    }
+
+    public async Task<List<Location>> GetLocationsAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.Locations, attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<Location>>(JsonOptions, cancellationToken) ?? new List<Location>();
+    }
+
     // ---- Shift types ----
 
     public async Task<List<ShiftTypeFull>> GetShiftTypesAsync(CancellationToken cancellationToken = default)
@@ -249,53 +270,6 @@ public sealed class ApiClient
     public async Task DeleteShiftTypeAsync(int id, CancellationToken cancellationToken = default)
     {
         var request = await CreateRequestAsync(HttpMethod.Delete, $"{ApiRoutes.ShiftTypes}/{id}", attachAuth: true);
-        using var response = await SendAsync(request, cancellationToken);
-        await EnsureSuccessAsync(response);
-    }
-
-    // ---- Team members ----
-
-    public async Task<List<Membership>> GetMembersAsync(CancellationToken cancellationToken = default)
-    {
-        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.Members, attachAuth: true);
-        using var response = await SendAsync(request, cancellationToken);
-        await EnsureSuccessAsync(response);
-        return await response.Content.ReadFromJsonAsync<List<Membership>>(JsonOptions, cancellationToken) ?? new List<Membership>();
-    }
-
-    public async Task<Membership> AddMemberAsync(string email, string role, CancellationToken cancellationToken = default)
-    {
-        var body = new AddMemberRequest { Email = email, Role = role };
-        var request = await CreateRequestAsync(HttpMethod.Post, ApiRoutes.Members, attachAuth: true, body: body);
-        using var response = await SendAsync(request, cancellationToken);
-        await EnsureSuccessAsync(response);
-        return await response.Content.ReadFromJsonAsync<Membership>(JsonOptions, cancellationToken)
-            ?? throw new ApiException("The server returned an empty response inviting the member.");
-    }
-
-    public async Task<Membership> UpdateMemberRoleAsync(int membershipId, string role, CancellationToken cancellationToken = default)
-    {
-        var body = new UpdateMemberRoleRequest { Role = role };
-        var request = await CreateRequestAsync(HttpMethod.Patch, $"{ApiRoutes.Members}/{membershipId}", attachAuth: true, body: body);
-        using var response = await SendAsync(request, cancellationToken);
-        await EnsureSuccessAsync(response);
-        return await response.Content.ReadFromJsonAsync<Membership>(JsonOptions, cancellationToken)
-            ?? throw new ApiException("The server returned an empty response changing the role.");
-    }
-
-    public async Task<Membership> LinkMemberEmployeeAsync(int membershipId, Guid? employeeId, CancellationToken cancellationToken = default)
-    {
-        var body = new LinkEmployeeRequest { EmployeeId = employeeId };
-        var request = await CreateRequestAsync(HttpMethod.Patch, $"{ApiRoutes.Members}/{membershipId}/employee", attachAuth: true, body: body);
-        using var response = await SendAsync(request, cancellationToken);
-        await EnsureSuccessAsync(response);
-        return await response.Content.ReadFromJsonAsync<Membership>(JsonOptions, cancellationToken)
-            ?? throw new ApiException("The server returned an empty response linking the employee.");
-    }
-
-    public async Task RemoveMemberAsync(int membershipId, CancellationToken cancellationToken = default)
-    {
-        var request = await CreateRequestAsync(HttpMethod.Delete, $"{ApiRoutes.Members}/{membershipId}", attachAuth: true);
         using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response);
     }

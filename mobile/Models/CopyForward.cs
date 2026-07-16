@@ -15,8 +15,8 @@ public sealed class CopyForwardRequestBody
 
 public sealed class CopyForwardFlag
 {
-    public Guid EmployeeId { get; set; }
-    public string EmployeeName { get; set; } = string.Empty;
+    public int TeamMemberId { get; set; }
+    public string MemberName { get; set; } = string.Empty;
     public DateOnly Date { get; set; }
     public string Reason { get; set; } = string.Empty;
 }
@@ -30,7 +30,7 @@ public sealed class CopyForwardResult
 /// <summary>Body for PUT /api/roster/entry.</summary>
 public sealed class RosterEntryUpsertRequest
 {
-    public Guid EmployeeId { get; set; }
+    public int TeamMemberId { get; set; }
     public DateOnly Date { get; set; }
     public string? ShiftCode { get; set; }
     public string? Note { get; set; }

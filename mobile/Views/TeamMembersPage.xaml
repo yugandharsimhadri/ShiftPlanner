@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.TeamMembersPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    x:DataType="vm:TeamMembersViewModel"
+    Title="Team Members">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="+ Add" Command="{Binding AddCommand}" IsEnabled="{Binding CanEdit}" />
+    </ContentPage.ToolbarItems>
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
+        <CollectionView ItemsSource="{Binding Members}">
+
+            <CollectionView.Header>
+                <VerticalStackLayout Padding="20,16,20,12" Spacing="12">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Team Members" Style="{StaticResource PageTitle}" />
+                        <Label Text="Directory, roles, and access" Style="{StaticResource SubtitleLabel}" />
+                    </VerticalStackLayout>
+
+                    <SearchBar Placeholder="Search by name, code, or track" Text="{Binding SearchText}" />
+
+                    <Label
+                        Text="{Binding ErrorMessage}"
+                        Style="{StaticResource CaptionLabel}"
+                        TextColor="{StaticResource ShiftLeaveFg}"
+                        IsVisible="{Binding HasError}" />
+                </VerticalStackLayout>
+            </CollectionView.Header>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:TeamMemberListItemViewModel">
+                    <Border Style="{StaticResource CardBorder}" Margin="20,4" Padding="14">
+                        <VerticalStackLayout Spacing="8">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                <Grid.GestureRecognizers>
+                                    <TapGestureRecognizer
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.OpenCommand}"
+                                        CommandParameter="{Binding .}" />
+                                </Grid.GestureRecognizers>
+                                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                    <Label Text="{Binding Name}" Style="{StaticResource ListTitleLabel}" />
+                                    <Label Text="{Binding Code}" Style="{StaticResource CaptionLabel}" />
+                                </VerticalStackLayout>
+                                <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="End">
+                                    <Label Text="{Binding TrackName}" Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="End" />
+                                    <Border Style="{StaticResource RoleBadgeBorder}" HorizontalOptions="End" IsVisible="{Binding IsInactive}">
+                                        <Label Text="Inactive" Style="{StaticResource RoleBadgeLabel}" />
+                                    </Border>
+                                </VerticalStackLayout>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="Auto,Auto" ColumnSpacing="8">
+                                <Border Grid.Column="0" Style="{StaticResource RoleBadgeBorder}">
+                                    <Label Text="{Binding AccessRole}" Style="{StaticResource RoleBadgeLabel}" />
+                                </Border>
+                                <Border Grid.Column="1" Style="{StaticResource RoleBadgeBorder}">
+                                    <Label Text="{Binding LoginLabel}" Style="{StaticResource RoleBadgeLabel}" />
+                                </Border>
+                            </Grid>
+
+                            <FlexLayout
+                                Wrap="Wrap"
+                                JustifyContent="Start"
+                                IsVisible="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.IsAdmin}">
+                                <Button
+                                    Text="Change role"
+                                    Style="{StaticResource TextLinkButton}"
+                                    FontSize="12"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.ChangeRoleCommand}"
+                                    CommandParameter="{Binding .}" />
+                                <Button
+                                    Text="Remove"
+                                    Style="{StaticResource TextLinkButton}"
+                                    FontSize="12"
+                                    TextColor="{StaticResource ShiftLeaveFg}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.RemoveCommand}"
+                                    CommandParameter="{Binding .}" />
+                            </FlexLayout>
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="40" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Label Text="No team members yet." Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+        </CollectionView>
+    </RefreshView>
+</ContentPage>

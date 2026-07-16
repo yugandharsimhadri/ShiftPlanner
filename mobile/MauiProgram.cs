@@ -32,14 +32,12 @@ public static class MauiProgram
         builder.Services.AddTransient<TeamGateViewModel>();
         builder.Services.AddTransient<RosterPage>();
         builder.Services.AddTransient<RosterViewModel>();
-        builder.Services.AddTransient<EmployeesPage>();
-        builder.Services.AddTransient<EmployeesViewModel>();
-        builder.Services.AddTransient<EmployeeFormPage>();
-        builder.Services.AddTransient<EmployeeFormViewModel>();
+        builder.Services.AddTransient<TeamMembersPage>();
+        builder.Services.AddTransient<TeamMembersViewModel>();
+        builder.Services.AddTransient<TeamMemberFormPage>();
+        builder.Services.AddTransient<TeamMemberFormViewModel>();
         builder.Services.AddTransient<SettingsPage>();
         builder.Services.AddTransient<SettingsViewModel>();
-        builder.Services.AddTransient<TeamPage>();
-        builder.Services.AddTransient<TeamViewModel>();
         builder.Services.AddTransient<ProfilePage>();
         builder.Services.AddTransient<ProfileViewModel>();
 
