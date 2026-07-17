@@ -68,11 +68,31 @@ public static class ApiTestClient
         return (await response.Content.ReadFromJsonAsync<List<TeamSummaryDto>>(JsonOptions))!;
     }
 
+    // Leave requests and shift swaps auto-approve by default — tests exercising the
+    // manual approval path need to turn that off first.
+    public static async Task SetAutoApproveAsync(
+        this HttpClient client, string token, int teamId, bool autoApproveLeaveRequests, bool autoApproveShiftSwaps)
+    {
+        var current = await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "/api/teams/current/settings").Authorized(token, teamId));
+        current.EnsureSuccessStatusCode();
+        var settings = (await current.Content.ReadFromJsonAsync<TeamSettingsDto>(JsonOptions))!;
+
+        var dto = new UpdateTeamSettingsDto(
+            settings.Name, settings.OrgName, settings.TeamStrength, settings.ShiftsCovered,
+            settings.DefaultOffDays, settings.CompOffsEnabled, autoApproveLeaveRequests, autoApproveShiftSwaps);
+
+        var response = await client.SendAsync(new HttpRequestMessage(HttpMethod.Put, "/api/teams/current/settings")
+        {
+            Content = JsonContent.Create(dto, options: JsonOptions)
+        }.Authorized(token, teamId));
+        response.EnsureSuccessStatusCode();
+    }
+
     public static async Task<Models.Track> CreateTrackAsync(this HttpClient client, string token, int teamId, string name)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/tracks")
         {
-            Content = JsonContent.Create(new TrackDto(null, name, null, "#4453AD"), options: JsonOptions)
+            Content = JsonContent.Create(new TrackDto(null, name, "#4453AD"), options: JsonOptions)
         }.Authorized(token, teamId);
         var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();

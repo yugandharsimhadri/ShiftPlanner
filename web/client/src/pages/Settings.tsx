@@ -15,11 +15,14 @@ import {
   getLocations,
   getShiftTypes,
   getTeamManagers,
+  getTeamMembers,
   getTeamSettings,
   getTracks,
   grantManager,
   revokeManager,
   searchPeopleByPhone,
+  setCoLead,
+  transferLead,
   updateShiftType,
   updateTeamSettings,
   updateTrack,
@@ -46,6 +49,7 @@ function TeamSettingsSection() {
   const isAdmin = currentRole === 'Admin'
   const queryClient = useQueryClient()
   const { data: settings } = useQuery({ queryKey: ['team-settings'], queryFn: getTeamSettings })
+  const { data: members } = useQuery({ queryKey: ['team-members'], queryFn: getTeamMembers })
 
   const [name, setName] = useState('')
   const [orgName, setOrgName] = useState('')
@@ -53,6 +57,8 @@ function TeamSettingsSection() {
   const [shiftsCovered, setShiftsCovered] = useState('')
   const [offDays, setOffDays] = useState<DayOfWeekName[]>([])
   const [compOffsEnabled, setCompOffsEnabled] = useState(false)
+  const [autoApproveLeaveRequests, setAutoApproveLeaveRequests] = useState(true)
+  const [autoApproveShiftSwaps, setAutoApproveShiftSwaps] = useState(true)
 
   useEffect(() => {
     if (!settings) return
@@ -62,6 +68,8 @@ function TeamSettingsSection() {
     setShiftsCovered(settings.shiftsCovered ?? '')
     setOffDays(settings.defaultOffDays)
     setCompOffsEnabled(settings.compOffsEnabled)
+    setAutoApproveLeaveRequests(settings.autoApproveLeaveRequests)
+    setAutoApproveShiftSwaps(settings.autoApproveShiftSwaps)
   }, [settings])
 
   const saveMutation = useMutation({
@@ -71,6 +79,18 @@ function TeamSettingsSection() {
       queryClient.invalidateQueries({ queryKey: ['teams', 'mine'] })
     },
   })
+
+  const invalidateLead = () => {
+    queryClient.invalidateQueries({ queryKey: ['team-settings'] })
+    queryClient.invalidateQueries({ queryKey: ['team-members'] })
+    queryClient.invalidateQueries({ queryKey: ['roster'] })
+  }
+  const transferLeadMutation = useMutation({ mutationFn: transferLead, onSuccess: invalidateLead })
+  const coLeadMutation = useMutation({ mutationFn: (p: { id: number; isCoLead: boolean }) => setCoLead(p.id, p.isCoLead), onSuccess: invalidateLead })
+
+  const activeMembers = (members ?? []).filter((m) => m.status === 'Active')
+  const currentLead = members?.find((m) => m.isTeamLead)
+  const currentCoLead = members?.find((m) => m.isCoLead)
 
   const toggleDay = (day: DayOfWeekName) => {
     if (!isAdmin) return
@@ -85,6 +105,8 @@ function TeamSettingsSection() {
       shiftsCovered: shiftsCovered.trim() || null,
       defaultOffDays: offDays,
       compOffsEnabled,
+      autoApproveLeaveRequests,
+      autoApproveShiftSwaps,
     })
 
   if (!settings) return null
@@ -95,8 +117,42 @@ function TeamSettingsSection() {
 
       <div className="settings-readout">
         <span>Team members: <b>{settings.activeMemberCount}</b>{settings.teamStrength ? ` of ${settings.teamStrength} budgeted` : ''}</span>
-        <span>Lead: <b>{settings.leadName ?? '—'}</b></span>
-        <span>Co-lead: <b>{settings.coLeadName ?? 'none'}</b></span>
+      </div>
+
+      <div className="settings-field-grid">
+        <div className="settings-field">
+          <label htmlFor="team-lead">Team lead</label>
+          <select
+            id="team-lead"
+            value={currentLead?.id ?? ''}
+            onChange={(e) => e.target.value && transferLeadMutation.mutate(Number(e.target.value))}
+            disabled={!isAdmin}
+          >
+            {!currentLead && <option value="">— None —</option>}
+            {activeMembers.map((m) => (
+              <option key={m.id} value={m.id}>{m.name} ({m.code})</option>
+            ))}
+          </select>
+          <p className="field-hint">At most one lead per team — picking someone new replaces the current one.</p>
+        </div>
+        <div className="settings-field">
+          <label htmlFor="team-colead">Co-lead</label>
+          <select
+            id="team-colead"
+            value={currentCoLead?.id ?? ''}
+            onChange={(e) => {
+              if (currentCoLead) coLeadMutation.mutate({ id: currentCoLead.id, isCoLead: false })
+              if (e.target.value) coLeadMutation.mutate({ id: Number(e.target.value), isCoLead: true })
+            }}
+            disabled={!isAdmin}
+          >
+            <option value="">— None —</option>
+            {activeMembers.filter((m) => !m.isTeamLead).map((m) => (
+              <option key={m.id} value={m.id}>{m.name} ({m.code})</option>
+            ))}
+          </select>
+          <p className="field-hint">At most one co-lead per team — optional.</p>
+        </div>
       </div>
 
       <div className="settings-field-grid">
@@ -159,6 +215,26 @@ function TeamSettingsSection() {
         Allow comp-offs — working a default off day earns a make-up day off
       </label>
 
+      <label className="compoff-check">
+        <input
+          type="checkbox"
+          checked={autoApproveLeaveRequests}
+          onChange={(e) => setAutoApproveLeaveRequests(e.target.checked)}
+          disabled={!isAdmin}
+        />
+        Auto-approve leave requests — skip the manual approval step
+      </label>
+
+      <label className="compoff-check">
+        <input
+          type="checkbox"
+          checked={autoApproveShiftSwaps}
+          onChange={(e) => setAutoApproveShiftSwaps(e.target.checked)}
+          disabled={!isAdmin}
+        />
+        Auto-approve shift swaps — settle a claimed offer immediately
+      </label>
+
       {isAdmin && (
         <>
           <button className="btn" onClick={save} disabled={!name.trim() || saveMutation.isPending}>
@@ -177,7 +253,6 @@ function TracksSection() {
   const queryClient = useQueryClient()
   const { data: tracks } = useQuery({ queryKey: ['tracks'], queryFn: getTracks })
   const [newTrackName, setNewTrackName] = useState('')
-  const [newTrackLead, setNewTrackLead] = useState('')
   const [newTrackColor, setNewTrackColor] = useState('#4453AD')
   const [newSubtrackName, setNewSubtrackName] = useState<Record<number, string>>({})
 
@@ -190,7 +265,6 @@ function TracksSection() {
     mutationFn: createTrack,
     onSuccess: () => {
       setNewTrackName('')
-      setNewTrackLead('')
       invalidate()
     },
   })
@@ -217,16 +291,6 @@ function TracksSection() {
                 className="track-name-input"
                 defaultValue={track.name}
                 onBlur={(e) => e.target.value !== track.name && updateTrackMutation.mutate({ ...track, name: e.target.value })}
-                readOnly={!canEdit}
-              />
-              <input
-                className="track-lead-input"
-                placeholder="Lead name"
-                defaultValue={track.leadName ?? ''}
-                onBlur={(e) =>
-                  e.target.value !== (track.leadName ?? '') &&
-                  updateTrackMutation.mutate({ ...track, leadName: e.target.value || null })
-                }
                 readOnly={!canEdit}
               />
               {canEdit && (
@@ -270,11 +334,10 @@ function TracksSection() {
         <div className="add-row">
           <input type="color" value={newTrackColor} onChange={(e) => setNewTrackColor(e.target.value)} className="color-swatch" />
           <input placeholder="New track name" value={newTrackName} onChange={(e) => setNewTrackName(e.target.value)} />
-          <input placeholder="Lead name" value={newTrackLead} onChange={(e) => setNewTrackLead(e.target.value)} />
           <button
             className="btn"
             disabled={!newTrackName.trim()}
-            onClick={() => createTrackMutation.mutate({ name: newTrackName.trim(), leadName: newTrackLead || null, color: newTrackColor })}
+            onClick={() => createTrackMutation.mutate({ name: newTrackName.trim(), color: newTrackColor })}
           >
             Add track
           </button>

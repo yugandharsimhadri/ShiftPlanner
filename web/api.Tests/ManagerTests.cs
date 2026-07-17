@@ -31,6 +31,25 @@ public class ManagerTests : IClassFixture<TestWebApplicationFactory>
         return (await response.Content.ReadFromJsonAsync<UnassignedPersonDto>(JsonOptions))!;
     }
 
+    // Unlike CreateStandalonePersonAsync, this actually puts the person on the team's
+    // roster (TeamIds includes teamId) — needed to test manager-search clauses that key
+    // off actual TeamMember rows, not just "created by."
+    private static async Task<TeamMemberDto> CreateRosteredMemberAsync(
+        HttpClient client, string token, int teamId, string code, string name, string phone, string email)
+    {
+        var dto = new CreateTeamMemberDto(
+            name, phone, email, null, code, null, null, null, null,
+            Models.EmploymentType.FullTime, DateOnly.FromDateTime(DateTime.Today), Models.EmployeeStatus.Active,
+            Models.TeamRole.Viewer, new List<int> { teamId });
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/teams/current/members")
+        {
+            Content = JsonContent.Create(dto, options: JsonOptions)
+        }.Authorized(token, teamId);
+        var response = await client.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<TeamMemberDto>(JsonOptions))!;
+    }
+
     [Fact]
     public async Task Admin_can_search_by_phone_grant_manager_and_the_manager_sees_the_team()
     {
@@ -111,6 +130,39 @@ public class ManagerTests : IClassFixture<TestWebApplicationFactory>
         var results = await (await client.SendAsync(searchRequest)).Content.ReadFromJsonAsync<List<PersonSearchResultDto>>(JsonOptions);
 
         Assert.DoesNotContain(results!, p => p.Name == "Only In B");
+    }
+
+    [Fact]
+    public async Task Search_includes_people_from_every_team_the_caller_administers()
+    {
+        var client = _factory.CreateClient();
+        var adminAToken = await client.RegisterAndLoginAsync("mgr-org-a@test.local");
+        var adminBToken = await client.RegisterAndLoginAsync("mgr-org-b@test.local");
+        var teamA = await client.CreateTeamAsync(adminAToken, "Org Team A");
+        var teamB = await client.CreateTeamAsync(adminBToken, "Org Team B");
+
+        // A person on Team B's actual roster, created by adminB — Team A's admin doesn't
+        // yet administer Team B, so this shouldn't be searchable from Team A.
+        var crossOrgPerson = await CreateRosteredMemberAsync(client, adminBToken, teamB.Id, "EMP-002", "Cross Org Person", "9990005555", "crossorg@test.local");
+
+        var beforeSearch = await (await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "/api/teams/current/managers/search?phone=999000")
+            .Authorized(adminAToken, teamA.Id))).Content.ReadFromJsonAsync<List<PersonSearchResultDto>>(JsonOptions);
+        Assert.DoesNotContain(beforeSearch!, p => p.Id == crossOrgPerson.PersonId);
+
+        // adminB invites adminA onto Team B and promotes them to Admin there.
+        var inviteResponse = await client.InviteMemberAsync(adminBToken, teamB.Id, "mgr-org-a@test.local", "Viewer", "EMP-003");
+        var invitedMember = await inviteResponse.Content.ReadFromJsonAsync<TeamMemberDto>(JsonOptions);
+        var promoteRequest = new HttpRequestMessage(HttpMethod.Patch, $"/api/teams/current/members/{invitedMember!.Id}/role")
+        {
+            Content = JsonContent.Create(new UpdateMemberRoleDto(Models.TeamRole.Admin), options: JsonOptions)
+        }.Authorized(adminBToken, teamB.Id);
+        (await client.SendAsync(promoteRequest)).EnsureSuccessStatusCode();
+
+        // Now that adminA is also an Admin on Team B, the same search from Team A should
+        // surface a person who's on Team B, even though adminA didn't create them.
+        var afterSearch = await (await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, "/api/teams/current/managers/search?phone=999000")
+            .Authorized(adminAToken, teamA.Id))).Content.ReadFromJsonAsync<List<PersonSearchResultDto>>(JsonOptions);
+        Assert.Contains(afterSearch!, p => p.Id == crossOrgPerson.PersonId);
     }
 
     [Fact]

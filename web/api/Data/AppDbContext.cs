@@ -21,6 +21,10 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
     public DbSet<Holiday> Holidays => Set<Holiday>();
     public DbSet<CompOffEntry> CompOffEntries => Set<CompOffEntry>();
     public DbSet<ManagerAssignment> ManagerAssignments => Set<ManagerAssignment>();
+    public DbSet<LeaveRequest> LeaveRequests => Set<LeaveRequest>();
+    public DbSet<ShiftSwapRequest> ShiftSwapRequests => Set<ShiftSwapRequest>();
+    public DbSet<RosterEntryHistory> RosterEntryHistories => Set<RosterEntryHistory>();
+    public DbSet<RosterMonthStatus> RosterMonthStatuses => Set<RosterMonthStatus>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -112,6 +116,55 @@ public class AppDbContext : IdentityDbContext<IdentityUser>
 
         builder.Entity<ManagerAssignment>()
             .HasIndex(a => new { a.PersonId, a.TeamId })
+            .IsUnique();
+
+        // --- Leave requests ------------------------------------------------------
+
+        builder.Entity<LeaveRequest>()
+            .HasOne(l => l.TeamMember)
+            .WithMany()
+            .HasForeignKey(l => l.TeamMemberId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // --- Shift swap requests --------------------------------------------------
+        // Three separate FKs onto TeamMember (offered-by, target, claimed-by) — all
+        // Restrict rather than Cascade, since a swap request shouldn't silently vanish
+        // (or cascade-delete something else) just because one referenced member is
+        // later removed from the team; the endpoint layer handles that case explicitly.
+
+        builder.Entity<ShiftSwapRequest>()
+            .HasOne(s => s.OfferedByTeamMember)
+            .WithMany()
+            .HasForeignKey(s => s.OfferedByTeamMemberId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<ShiftSwapRequest>()
+            .HasOne(s => s.TargetTeamMember)
+            .WithMany()
+            .HasForeignKey(s => s.TargetTeamMemberId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<ShiftSwapRequest>()
+            .HasOne(s => s.ClaimedByTeamMember)
+            .WithMany()
+            .HasForeignKey(s => s.ClaimedByTeamMemberId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // --- Roster entry history -------------------------------------------------
+
+        builder.Entity<RosterEntryHistory>()
+            .HasOne(h => h.TeamMember)
+            .WithMany()
+            .HasForeignKey(h => h.TeamMemberId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<RosterEntryHistory>()
+            .HasIndex(h => new { h.TeamId, h.Date });
+
+        // --- Roster month publish status ------------------------------------------
+
+        builder.Entity<RosterMonthStatus>()
+            .HasIndex(r => new { r.TeamId, r.Year, r.Month })
             .IsUnique();
     }
 }

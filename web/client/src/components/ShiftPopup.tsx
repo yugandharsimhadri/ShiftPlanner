@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CompOffEntry, ShiftType } from '../types'
 import './ShiftPopup.css'
 
@@ -7,10 +7,12 @@ interface Props {
   y: number
   shiftTypes: ShiftType[]
   currentCode: string | null
-  onSelect: (code: string | null) => void
+  currentNote?: string | null
+  onSelect: (code: string | null, note: string | null) => void
   onClose: () => void
   pendingCompOffs?: CompOffEntry[]
   onUseCompOff?: (id: number) => void
+  leaveWarning?: string | null
 }
 
 export default function ShiftPopup({
@@ -18,12 +20,15 @@ export default function ShiftPopup({
   y,
   shiftTypes,
   currentCode,
+  currentNote,
   onSelect,
   onClose,
   pendingCompOffs = [],
   onUseCompOff,
+  leaveWarning,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null)
+  const [note, setNote] = useState(currentNote ?? '')
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -46,12 +51,15 @@ export default function ShiftPopup({
   return (
     <div className="shift-popup" ref={ref} style={{ left: clampedX, top: clampedY }}>
       <div className="shift-popup-title">Assign shift</div>
+
+      {leaveWarning && <div className="shift-popup-warning">{leaveWarning}</div>}
+
       {shiftTypes.map((st) => (
         <button
           key={st.code}
           className={`shift-popup-option${currentCode === st.code ? ' selected' : ''}`}
           style={{ '--chip-color': st.color } as React.CSSProperties}
-          onClick={() => onSelect(st.code)}
+          onClick={() => onSelect(st.code, note.trim() || null)}
         >
           <span className="shift-popup-code">{st.code}</span>
           <span className="shift-popup-name">{st.name}</span>
@@ -62,10 +70,18 @@ export default function ShiftPopup({
           )}
         </button>
       ))}
-      <button className="shift-popup-option shift-popup-clear" onClick={() => onSelect(null)}>
+      <button className="shift-popup-option shift-popup-clear" onClick={() => onSelect(null, null)}>
         <span className="shift-popup-code">—</span>
         <span className="shift-popup-name">Clear</span>
       </button>
+
+      <textarea
+        className="shift-popup-note"
+        placeholder="Note (optional) — e.g. cover the register at 2pm"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={2}
+      />
 
       {pendingCompOffs.length > 0 && onUseCompOff && (
         <div className="shift-popup-compoffs">

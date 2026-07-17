@@ -22,4 +22,8 @@ public class RosterEntry
 
     public RosterEntrySource Source { get; set; } = RosterEntrySource.Manual;
     public string? Note { get; set; }
+
+    // Set when the assigned team member taps "Acknowledge" on their own upcoming shift —
+    // a lightweight "I've seen this" signal, not a hard requirement to work the shift.
+    public DateTimeOffset? AcknowledgedAt { get; set; }
 }

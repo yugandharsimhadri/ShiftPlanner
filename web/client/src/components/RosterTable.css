@@ -96,6 +96,31 @@
   background: var(--accent);
 }
 
+/* Approved leave — visually distinct from an unfilled off-day, not just a blank cell. */
+.shift-cell.on-leave {
+  background: var(--shift-leave-bg);
+  border-color: color-mix(in srgb, var(--shift-leave) 40%, var(--line));
+  color: var(--shift-leave);
+}
+
+/* A working day with nothing assigned yet — different from a scheduled day off, so it
+   reads as "still needs attention" rather than blending in with intentional off-days. */
+.shift-cell.unassigned {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--line));
+}
+
+.shift-cell.has-note::before {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+}
+
 .shift-cell {
   position: relative;
 }

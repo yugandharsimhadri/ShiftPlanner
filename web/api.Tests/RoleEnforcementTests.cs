@@ -105,5 +105,37 @@ public class RoleEnforcementTests : IClassFixture<TestWebApplicationFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Any_admin_not_just_the_current_lead_can_transfer_the_lead()
+    {
+        // Lead/Co-Lead moved from "the lead personally hands it off" to a Team Settings
+        // configuration action any Admin can perform.
+        var (client, adminToken, teamId, _) = await SetUpTeamAsync("lead-transfer");
+
+        var inviteResponse = await client.InviteMemberAsync(adminToken, teamId, "second-admin@test.local", "Viewer", "EMP-002");
+        var invited = await inviteResponse.Content.ReadFromJsonAsync<MemberRow>(ApiTestClient.JsonOptions);
+        var promote = new HttpRequestMessage(HttpMethod.Patch, $"/api/teams/current/members/{invited!.Id}/role")
+        {
+            Content = JsonContent.Create(new { accessRole = "Admin" })
+        }.Authorized(adminToken, teamId);
+        (await client.SendAsync(promote)).EnsureSuccessStatusCode();
+        var secondAdminToken = await client.RegisterAndLoginAsync("second-admin@test.local");
+
+        // secondAdmin never held the "lead" label themselves, yet should still be able to
+        // transfer it (the old restriction only let the current lead do this).
+        var transferRequest = new HttpRequestMessage(HttpMethod.Patch, $"/api/teams/current/members/{invited.Id}/lead")
+            .Authorized(secondAdminToken, teamId);
+        var transferResponse = await client.SendAsync(transferRequest);
+
+        transferResponse.EnsureSuccessStatusCode();
+        var updated = await transferResponse.Content.ReadFromJsonAsync<MemberRow>(ApiTestClient.JsonOptions);
+        Assert.True(updated!.IsTeamLead);
+
+        // At most one lead: the original admin should no longer hold it.
+        var membersRequest = new HttpRequestMessage(HttpMethod.Get, "/api/teams/current/members").Authorized(adminToken, teamId);
+        var members = await (await client.SendAsync(membersRequest)).Content.ReadFromJsonAsync<List<MemberRow>>(ApiTestClient.JsonOptions);
+        Assert.Single(members!, m => m.IsTeamLead);
+    }
+
     private sealed record MemberRow(int Id, string Name, string AccessRole, bool IsTeamLead);
 }

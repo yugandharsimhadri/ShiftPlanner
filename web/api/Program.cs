@@ -96,6 +96,9 @@ app.MapReportsEndpoints();
 app.MapAvailabilityEndpoints();
 app.MapProfileEndpoints();
 app.MapManagerEndpoints();
+app.MapLeaveRequestsEndpoints();
+app.MapShiftSwapsEndpoints();
+app.MapCalendarEndpoints();
 
 app.MapFallbackToFile("index.html");
 

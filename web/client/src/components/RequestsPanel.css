@@ -1,0 +1,109 @@
+.requests-panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.requests-panel-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.requests-panel-chevron {
+  margin-left: auto;
+  color: var(--ink-faint);
+}
+
+.requests-panel-body {
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.requests-panel-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.requests-section h4 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ink-faint);
+  margin: 0 0 8px;
+}
+
+.request-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.request-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.request-row-actions .btn-secondary {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.request-reason {
+  color: var(--ink-faint);
+}
+
+.requests-empty {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.badge-warn {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.badge-pending {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.badge-approved,
+.badge-claimed {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.badge-rejected {
+  background: var(--critical-soft);
+  color: var(--critical);
+}
+
+.badge-cancelled {
+  background: var(--surface-soft);
+  color: var(--ink-faint);
+}
+
+.badge-open {
+  background: var(--accent-soft);
+  color: var(--accent);
+}

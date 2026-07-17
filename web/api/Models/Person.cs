@@ -31,5 +31,11 @@ public class Person
     // person overrides it themselves.
     public int? AvailabilityAutoExpiryHoursOverride { get; set; }
 
+    // The secret in this person's calendar subscription URL (GET /api/calendar/{token}.ics).
+    // Generated lazily on first request rather than at Person creation — most people will
+    // never use it. The token itself is the credential (same trust model every calendar
+    // feed URL uses), so this endpoint is deliberately unauthenticated otherwise.
+    public Guid? CalendarFeedToken { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

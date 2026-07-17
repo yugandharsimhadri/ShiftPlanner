@@ -68,6 +68,28 @@
   color: var(--ink-faint);
 }
 
+.shift-popup-warning {
+  font-size: 11.5px;
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin: 0 0 6px;
+}
+
+.shift-popup-note {
+  width: 100%;
+  resize: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--surface-soft);
+  margin-top: 4px;
+}
+
 .shift-popup-compoffs {
   border-top: 1px solid var(--line);
   margin-top: 4px;

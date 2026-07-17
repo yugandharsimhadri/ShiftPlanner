@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
-import type { DayOfWeekName, RosterEntry, ShiftType, TeamMember } from '../types'
+import type { DayOfWeekName, LeaveRequest, RosterEntry, ShiftType, TeamMember } from '../types'
 import { isTeamOffDay, toIsoDate, weekdayLetter } from '../lib/dates'
 import './RosterTable.css'
 
@@ -15,6 +15,17 @@ interface Props {
   offDays: DayOfWeekName[]
   onCellClick: (teamMemberId: number, date: string, el: HTMLElement) => void
   canEdit: boolean
+  leaveRequests?: LeaveRequest[]
+}
+
+// Approved leave overlapping the given date, for the given member — a plain date-range
+// scan rather than a precomputed set, since a month only has ~30 days per member and
+// approved leave requests are typically few.
+function onApprovedLeave(leaveRequests: LeaveRequest[] | undefined, teamMemberId: number, date: string): boolean {
+  if (!leaveRequests) return false
+  return leaveRequests.some(
+    (l) => l.teamMemberId === teamMemberId && l.status === 'Approved' && date >= l.startDate && date <= l.endDate
+  )
 }
 
 const columnHelper = createColumnHelper<TeamMember>()
@@ -30,6 +41,7 @@ export default function RosterTable({
   offDays,
   onCellClick,
   canEdit,
+  leaveRequests,
 }: Props) {
   const columns = useMemo(() => {
     const cols = [
@@ -42,7 +54,7 @@ export default function RosterTable({
             <div className="emp-cell">
               <div className="emp-name">{member.name}</div>
               <div className="emp-meta mono">
-                {member.code} · {member.roleTitle}
+                {member.code}{member.jobRoleName ? ` · ${member.jobRoleName}` : ''}
               </div>
             </div>
           )
@@ -67,9 +79,12 @@ export default function RosterTable({
             const shift = entry?.shiftCode ? shiftTypesByCode.get(entry.shiftCode) : undefined
             const offDay = isTeamOffDay(year, month, day, offDays)
             const workedOffDay = offDay && shift?.isWorkShift
+            const onLeave = !shift && onApprovedLeave(leaveRequests, member.id, date)
+            const unassigned = !shift && !offDay && !onLeave
+            const hasNote = !!entry?.note
             return (
               <button
-                className={`shift-cell${canEdit ? '' : ' shift-cell-readonly'}${offDay && !shift ? ' off-day' : ''}${workedOffDay ? ' comp-off-earned' : ''}`}
+                className={`shift-cell${canEdit ? '' : ' shift-cell-readonly'}${offDay && !shift ? ' off-day' : ''}${workedOffDay ? ' comp-off-earned' : ''}${onLeave ? ' on-leave' : ''}${unassigned ? ' unassigned' : ''}${hasNote ? ' has-note' : ''}`}
                 style={
                   shift
                     ? ({ '--chip-color': shift.color } as React.CSSProperties)
@@ -79,15 +94,17 @@ export default function RosterTable({
                 onClick={(e) => canEdit && onCellClick(member.id, date, e.currentTarget)}
                 title={
                   shift
-                    ? `${shift.name}${entry?.source === 'Copied' ? ' (copied)' : ''}${workedOffDay ? ' — earns a comp-off' : ''}`
-                    : offDay
-                      ? 'Weekly off'
-                      : canEdit
-                        ? 'Unassigned'
-                        : 'No shift'
+                    ? `${shift.name}${entry?.source === 'Copied' ? ' (copied)' : ''}${workedOffDay ? ' — earns a comp-off' : ''}${hasNote ? `\nNote: ${entry!.note}` : ''}`
+                    : onLeave
+                      ? 'Approved leave'
+                      : offDay
+                        ? 'Weekly off'
+                        : canEdit
+                          ? 'Unassigned — needs a shift'
+                          : 'No shift'
                 }
               >
-                {shift ? shift.code : ''}
+                {shift ? shift.code : onLeave ? 'L' : ''}
               </button>
             )
           },
@@ -95,7 +112,7 @@ export default function RosterTable({
       ),
     ]
     return cols
-  }, [days, entriesMap, shiftTypesByCode, holidaySet, offDays, year, month, onCellClick, canEdit])
+  }, [days, entriesMap, shiftTypesByCode, holidaySet, offDays, year, month, onCellClick, canEdit, leaveRequests])
 
   const table = useReactTable({
     data: members,

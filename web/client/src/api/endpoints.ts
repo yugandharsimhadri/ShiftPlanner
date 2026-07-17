@@ -1,13 +1,17 @@
 import { api } from './client'
 import type {
   AssignPersonToTeamInput,
+  BulkEntryResult,
   CompOffEntry,
   CompOffStatus,
   CopyForwardResult,
+  CreateLeaveRequestInput,
+  CreateShiftSwapInput,
   CreateTeamMemberInput,
   Holiday,
   ImportResult,
   JobRole,
+  LeaveRequest,
   Location,
   ManagerAssignment,
   ManagerTeam,
@@ -15,7 +19,10 @@ import type {
   Me,
   PersonSearchResult,
   Profile,
+  RosterEntryHistoryRow,
+  RosterPublishStatus,
   RosterResponse,
+  ShiftSwapRequest,
   ShiftType,
   Subtrack,
   TeamMember,
@@ -177,6 +184,117 @@ export async function copyForward(payload: CopyForwardRequest): Promise<CopyForw
   return res.data
 }
 
+export async function bulkAssignRoster(payload: {
+  teamMemberIds: number[]
+  dates: string[]
+  shiftCode: string | null
+}): Promise<BulkEntryResult> {
+  const res = await api.post('/api/roster/bulk-entry', payload)
+  return res.data
+}
+
+export async function applyRosterPattern(payload: {
+  year: number
+  month: number
+  teamMemberIds: number[]
+  weeklyPattern: Record<string, string | null>
+  skipInactive: boolean
+}): Promise<BulkEntryResult> {
+  const res = await api.post('/api/roster/apply-pattern', payload)
+  return res.data
+}
+
+export async function getRosterPublishStatus(year: number, month: number): Promise<RosterPublishStatus> {
+  const res = await api.get('/api/roster/publish-status', { params: { year, month } })
+  return res.data
+}
+
+export async function publishRoster(year: number, month: number): Promise<RosterPublishStatus> {
+  const res = await api.post('/api/roster/publish', null, { params: { year, month } })
+  return res.data
+}
+
+export async function unpublishRoster(year: number, month: number): Promise<RosterPublishStatus> {
+  const res = await api.post('/api/roster/unpublish', null, { params: { year, month } })
+  return res.data
+}
+
+export async function getRosterHistory(year: number, month: number): Promise<RosterEntryHistoryRow[]> {
+  const res = await api.get('/api/roster/history', { params: { year, month } })
+  return res.data
+}
+
+export async function acknowledgeShift(entryId: number) {
+  const res = await api.patch(`/api/roster/entry/${entryId}/acknowledge`)
+  return res.data
+}
+
+// --- Leave requests -----------------------------------------------------------
+
+export async function getLeaveRequests(status?: string): Promise<LeaveRequest[]> {
+  const res = await api.get('/api/leave-requests', { params: { status } })
+  return res.data
+}
+
+export async function createLeaveRequest(payload: CreateLeaveRequestInput): Promise<LeaveRequest> {
+  const res = await api.post('/api/leave-requests', payload)
+  return res.data
+}
+
+export async function approveLeaveRequest(id: number): Promise<LeaveRequest> {
+  const res = await api.post(`/api/leave-requests/${id}/approve`)
+  return res.data
+}
+
+export async function rejectLeaveRequest(id: number, decisionNote?: string | null): Promise<LeaveRequest> {
+  const res = await api.post(`/api/leave-requests/${id}/reject`, { decisionNote })
+  return res.data
+}
+
+export async function cancelLeaveRequest(id: number): Promise<LeaveRequest> {
+  const res = await api.post(`/api/leave-requests/${id}/cancel`)
+  return res.data
+}
+
+// --- Shift swaps ----------------------------------------------------------------
+
+export async function getShiftSwaps(): Promise<ShiftSwapRequest[]> {
+  const res = await api.get('/api/shift-swaps')
+  return res.data
+}
+
+export async function createShiftSwap(payload: CreateShiftSwapInput): Promise<ShiftSwapRequest> {
+  const res = await api.post('/api/shift-swaps', payload)
+  return res.data
+}
+
+export async function claimShiftSwap(id: number): Promise<ShiftSwapRequest> {
+  const res = await api.post(`/api/shift-swaps/${id}/claim`)
+  return res.data
+}
+
+export async function approveShiftSwap(id: number): Promise<ShiftSwapRequest> {
+  const res = await api.post(`/api/shift-swaps/${id}/approve`)
+  return res.data
+}
+
+export async function rejectShiftSwap(id: number): Promise<ShiftSwapRequest> {
+  const res = await api.post(`/api/shift-swaps/${id}/reject`)
+  return res.data
+}
+
+export async function cancelShiftSwap(id: number): Promise<ShiftSwapRequest> {
+  const res = await api.post(`/api/shift-swaps/${id}/cancel`)
+  return res.data
+}
+
+// --- Calendar feed --------------------------------------------------------------
+
+export async function getCalendarFeedUrl(): Promise<{ url: string }> {
+  const res = await api.get('/api/me/calendar-feed-url')
+  return res.data
+}
+
 // --- Tracks / Subtracks ------------------------------------------------------
 
 export async function getTracks(): Promise<Track[]> {
@@ -184,12 +302,12 @@ export async function getTracks(): Promise<Track[]> {
   return res.data
 }
 
-export async function createTrack(payload: { name: string; leadName: string | null; color: string }) {
+export async function createTrack(payload: { name: string; color: string }) {
   const res = await api.post('/api/tracks', { id: null, ...payload })
   return res.data
 }
 
-export async function updateTrack(id: number, payload: { name: string; leadName: string | null; color: string }) {
+export async function updateTrack(id: number, payload: { name: string; color: string }) {
   const res = await api.put(`/api/tracks/${id}`, { id, ...payload })
   return res.data
 }

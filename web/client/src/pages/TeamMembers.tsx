@@ -1,13 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  getMe,
   getTeamMembers,
   getTracks,
   getUnassignedCandidates,
   removeMember,
-  setCoLead,
-  transferLead,
   updateMemberAccessRole,
 } from '../api/endpoints'
 import TeamMemberFormModal from '../components/TeamMemberFormModal'
@@ -29,9 +26,6 @@ export default function TeamMembers() {
     queryFn: getUnassignedCandidates,
     enabled: !!currentTeam && isAdmin,
   })
-  const { data: me } = useQuery({ queryKey: ['me', currentTeam?.id], queryFn: getMe, enabled: !!currentTeam })
-  const isCurrentUserLead = me?.isTeamLead === true
-
   const [editing, setEditing] = useState<TeamMember | 'new' | UnassignedPerson | null>(null)
 
   const invalidate = () => {
@@ -46,8 +40,6 @@ export default function TeamMembers() {
     onSuccess: invalidate,
   })
   const removeMutation = useMutation({ mutationFn: removeMember, onSuccess: invalidate })
-  const transferLeadMutation = useMutation({ mutationFn: transferLead, onSuccess: invalidate })
-  const coLeadMutation = useMutation({ mutationFn: (p: { id: number; isCoLead: boolean }) => setCoLead(p.id, p.isCoLead), onSuccess: invalidate })
 
   function handleRemove(m: TeamMember) {
     if (window.confirm(`Remove ${m.name} (${m.code}) from this team? Their roster history on this team is also deleted.`)) {
@@ -153,14 +145,6 @@ export default function TeamMembers() {
                   {isAdmin && (
                     <td className="row-actions">
                       <button className="btn-secondary" onClick={() => setEditing(m)}>Edit</button>
-                      {isCurrentUserLead && !m.isTeamLead && (
-                        <button className="btn-ghost" onClick={() => transferLeadMutation.mutate(m.id)}>Make lead</button>
-                      )}
-                      {isCurrentUserLead && !m.isTeamLead && (
-                        <button className="btn-ghost" onClick={() => coLeadMutation.mutate({ id: m.id, isCoLead: !m.isCoLead })}>
-                          {m.isCoLead ? 'Remove co-lead' : 'Make co-lead'}
-                        </button>
-                      )}
                       {!m.isTeamLead && (
                         <button className="btn-danger" onClick={() => handleRemove(m)}>Remove</button>
                       )}

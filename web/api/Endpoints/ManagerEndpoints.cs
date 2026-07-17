@@ -30,19 +30,22 @@ public static class ManagerEndpoints
             return Results.Ok(managers);
         }).RequireTeamAdmin();
 
-        // People eligible to become a manager of this team: anyone the acting admin
-        // already knows (added anywhere) or who's already on this team — never an
-        // arbitrary cross-tenant search.
+        // People eligible to become a manager of this team: anyone already on some team
+        // the acting admin administers ("the organization," from this admin's point of
+        // view — there's no separate Organization entity, so every team this admin runs
+        // stands in for it) or already known to them, never an arbitrary cross-tenant
+        // search.
         teamGroup.MapGet("/search", async (string? phone, AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
             if (string.IsNullOrWhiteSpace(phone)) return Results.Ok(new List<PersonSearchResultDto>());
 
             var query = phone.Trim();
+            var adminTeamIds = await AdminTeamIdsAsync(db, ctx.UserId);
             var candidates = await db.People
                 .Where(p =>
                     p.Phone != null && p.Phone.Contains(query) &&
-                    (p.CreatedByUserId == ctx.UserId || db.TeamMembers.Any(m => m.TeamId == ctx.TeamId && m.PersonId == p.Id)))
+                    (p.CreatedByUserId == ctx.UserId || db.TeamMembers.Any(m => adminTeamIds.Contains(m.TeamId) && m.PersonId == p.Id)))
                 .Select(p => new PersonSearchResultDto(p.Id, p.Name, p.Phone ?? "", p.Email))
                 .Take(10)
                 .ToListAsync();
@@ -53,9 +56,10 @@ public static class ManagerEndpoints
         teamGroup.MapPost("", async (GrantManagerDto dto, AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
+            var adminTeamIds = await AdminTeamIdsAsync(db, ctx.UserId);
             var person = await db.People.FirstOrDefaultAsync(p =>
                 p.Id == dto.PersonId &&
-                (p.CreatedByUserId == ctx.UserId || db.TeamMembers.Any(m => m.TeamId == ctx.TeamId && m.PersonId == p.Id)));
+                (p.CreatedByUserId == ctx.UserId || db.TeamMembers.Any(m => adminTeamIds.Contains(m.TeamId) && m.PersonId == p.Id)));
             if (person is null) return Results.NotFound();
 
             var alreadyGranted = await db.ManagerAssignments.AnyAsync(a => a.PersonId == person.Id && a.TeamId == ctx.TeamId);
@@ -132,6 +136,14 @@ public static class ManagerEndpoints
             return Results.Ok(result.OrderBy(t => t.TeamName));
         });
     }
+
+    // Every team where this caller holds Admin — the closest thing to "their
+    // organization" that exists without a real Organization entity.
+    private static Task<List<int>> AdminTeamIdsAsync(AppDbContext db, string userId) =>
+        db.TeamMembers
+            .Where(m => m.Person!.UserId == userId && m.AccessRole == TeamRole.Admin)
+            .Select(m => m.TeamId)
+            .ToListAsync();
 
     // A manager-only person (never a TeamMember anywhere) has no team-scoped endpoint
     // to trigger claiming on first login, so these cross-team routes do it themselves —

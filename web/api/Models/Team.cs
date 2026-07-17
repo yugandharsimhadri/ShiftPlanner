@@ -31,6 +31,13 @@ public class Team
     // that doesn't want the feature never sees it appear.
     public bool CompOffsEnabled { get; set; }
 
+    // If true, a member's leave request / shift-swap claim is settled immediately
+    // instead of sitting Pending for an Editor/Admin to act on. On by default — most
+    // small teams don't want to be a bottleneck for something a member can self-serve;
+    // an Admin can flip this off once the team wants a human in the loop.
+    public bool AutoApproveLeaveRequests { get; set; } = true;
+    public bool AutoApproveShiftSwaps { get; set; } = true;
+
     [NotMapped]
     public List<DayOfWeek> DefaultOffDays
     {

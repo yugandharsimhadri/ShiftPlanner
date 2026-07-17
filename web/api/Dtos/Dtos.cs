@@ -2,7 +2,7 @@ using ShiftPlanner.Api.Models;
 
 namespace ShiftPlanner.Api.Dtos;
 
-public record TrackDto(int? Id, string Name, string? LeadName, string Color);
+public record TrackDto(int? Id, string Name, string Color);
 
 public record SubtrackDto(int? Id, int TrackId, string Name);
 
@@ -133,8 +133,8 @@ public record TeamSettingsDto(
     List<DayOfWeek> DefaultOffDays,
     bool CompOffsEnabled,
     int ActiveMemberCount,
-    string? LeadName,
-    string? CoLeadName
+    bool AutoApproveLeaveRequests,
+    bool AutoApproveShiftSwaps
 );
 
 public record UpdateTeamSettingsDto(
@@ -143,7 +143,9 @@ public record UpdateTeamSettingsDto(
     int? TeamStrength,
     string? ShiftsCovered,
     List<DayOfWeek> DefaultOffDays,
-    bool CompOffsEnabled
+    bool CompOffsEnabled,
+    bool AutoApproveLeaveRequests,
+    bool AutoApproveShiftSwaps
 );
 
 // --- Auth ------------------------------------------------------------------
@@ -219,6 +221,72 @@ public record ManagerTeamAvailabilityDto(int TeamId, string TeamName, List<TeamM
 public record ManagerTeamDto(int Id, string Name);
 
 // --- Reports -------------------------------------------------------------------
+
+// --- Roster: bulk / pattern / publish / history / acknowledge ------------------
+
+public record BulkRosterEntryRequest(List<int> TeamMemberIds, List<DateOnly> Dates, string? ShiftCode);
+
+public record BulkEntryResultDto(int UpdatedCount, List<string> Errors);
+
+public record ApplyPatternRequest(
+    int Year,
+    int Month,
+    List<int> TeamMemberIds,
+    Dictionary<DayOfWeek, string?> WeeklyPattern,
+    bool SkipInactive
+);
+
+public record RosterPublishStatusDto(bool IsPublished, DateTimeOffset? PublishedAt);
+
+public record RosterEntryHistoryDto(
+    int Id,
+    int TeamMemberId,
+    string MemberName,
+    DateOnly Date,
+    string? OldShiftCode,
+    string? NewShiftCode,
+    string ChangedByUserId,
+    DateTimeOffset ChangedAt,
+    string Source
+);
+
+// --- Leave requests ---------------------------------------------------------------
+
+public record LeaveRequestDto(
+    int Id,
+    int TeamMemberId,
+    string MemberName,
+    string MemberCode,
+    DateOnly StartDate,
+    DateOnly EndDate,
+    string? Reason,
+    LeaveStatus Status,
+    DateTimeOffset RequestedAt,
+    DateTimeOffset? DecidedAt,
+    string? DecisionNote
+);
+
+public record CreateLeaveRequestDto(DateOnly StartDate, DateOnly EndDate, string? Reason);
+
+public record DecideLeaveRequestDto(string? DecisionNote);
+
+// --- Shift swap requests -----------------------------------------------------------
+
+public record ShiftSwapRequestDto(
+    int Id,
+    int OfferedByTeamMemberId,
+    string OfferedByName,
+    DateOnly Date,
+    string ShiftCode,
+    int? TargetTeamMemberId,
+    string? TargetName,
+    int? ClaimedByTeamMemberId,
+    string? ClaimedByName,
+    SwapStatus Status,
+    DateTimeOffset CreatedAt
+);
+
+public record CreateShiftSwapDto(DateOnly Date, string ShiftCode, int? TargetTeamMemberId);
 
 public record UtilizationRowDto(
     int TeamMemberId,

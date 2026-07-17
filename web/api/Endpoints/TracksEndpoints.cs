@@ -28,7 +28,7 @@ public static class TracksEndpoints
         group.MapPost("", async (TrackDto dto, AppDbContext db, HttpContext http) =>
         {
             var teamId = http.GetTeamContext().TeamId;
-            var track = new Track { TeamId = teamId, Name = dto.Name, LeadName = dto.LeadName, Color = dto.Color };
+            var track = new Track { TeamId = teamId, Name = dto.Name, Color = dto.Color };
             db.Tracks.Add(track);
             await db.SaveChangesAsync();
             return Results.Created($"/api/tracks/{track.Id}", track);
@@ -40,7 +40,6 @@ public static class TracksEndpoints
             var track = await db.Tracks.FirstOrDefaultAsync(t => t.Id == id && t.TeamId == teamId);
             if (track is null) return Results.NotFound();
             track.Name = dto.Name;
-            track.LeadName = dto.LeadName;
             track.Color = dto.Color;
             await db.SaveChangesAsync();
             return Results.Ok(track);

@@ -341,36 +341,37 @@ public static class TeamsEndpoints
             return Results.Ok(await BuildDto(db, member, member.Person!));
         }).RequireTeamAdmin();
 
-        // Transfers the "Lead" label to another Admin on this team. Restricted to
-        // whoever currently holds it.
+        // Transfers the "Lead" label to another team member — a Team Settings
+        // configuration action, so any Admin can call it (not just whoever currently
+        // holds the label). At most one lead per team, enforced by unsetting whoever
+        // had it before.
         members.MapPatch("/{memberId:int}/lead", async (int memberId, AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
-            var caller = await db.TeamMembers.FirstOrDefaultAsync(m => m.TeamId == ctx.TeamId && m.Person!.UserId == ctx.UserId);
-            if (caller is null || !caller.IsTeamLead)
-                return Results.BadRequest(new { message = "Only the current team lead can transfer the lead." });
 
             var target = await db.TeamMembers.Include(m => m.Person).FirstOrDefaultAsync(m => m.Id == memberId && m.TeamId == ctx.TeamId);
             if (target is null) return Results.NotFound();
             if (target.Status != EmployeeStatus.Active)
                 return Results.BadRequest(new { message = "Only an active member can become the lead." });
 
+            var previousLead = await db.TeamMembers
+                .Where(m => m.TeamId == ctx.TeamId && m.IsTeamLead && m.Id != memberId)
+                .ToListAsync();
+            foreach (var m in previousLead) m.IsTeamLead = false;
+
             target.AccessRole = TeamRole.Admin;
             target.IsTeamLead = true;
             target.IsCoLead = false;
-            caller.IsTeamLead = false;
 
             await db.SaveChangesAsync();
             return Results.Ok(await BuildDto(db, target, target.Person!));
         }).RequireTeamAdmin();
 
-        // Sets or clears the "Co-Lead" label — at most one at a time.
+        // Sets or clears the "Co-Lead" label — at most one at a time. Same as above,
+        // a Team Settings configuration action open to any Admin.
         members.MapPatch("/{memberId:int}/co-lead", async (int memberId, SetCoLeadDto dto, AppDbContext db, HttpContext http) =>
         {
             var ctx = http.GetTeamContext();
-            var caller = await db.TeamMembers.FirstOrDefaultAsync(m => m.TeamId == ctx.TeamId && m.Person!.UserId == ctx.UserId);
-            if (caller is null || !caller.IsTeamLead)
-                return Results.BadRequest(new { message = "Only the current team lead can assign a co-lead." });
 
             var target = await db.TeamMembers.Include(m => m.Person).FirstOrDefaultAsync(m => m.Id == memberId && m.TeamId == ctx.TeamId);
             if (target is null) return Results.NotFound();
@@ -453,6 +454,8 @@ public static class TeamsEndpoints
             team.ShiftsCovered = string.IsNullOrWhiteSpace(dto.ShiftsCovered) ? null : dto.ShiftsCovered.Trim();
             team.DefaultOffDays = dto.DefaultOffDays ?? new List<DayOfWeek>();
             team.CompOffsEnabled = dto.CompOffsEnabled;
+            team.AutoApproveLeaveRequests = dto.AutoApproveLeaveRequests;
+            team.AutoApproveShiftSwaps = dto.AutoApproveShiftSwaps;
 
             await db.SaveChangesAsync();
             return Results.Ok(await BuildSettingsDto(db, ctx.TeamId));
@@ -482,12 +485,11 @@ public static class TeamsEndpoints
     {
         var team = await db.Teams.FirstAsync(t => t.Id == teamId);
         var activeMemberCount = await db.TeamMembers.CountAsync(m => m.TeamId == teamId && m.Status == EmployeeStatus.Active);
-        var leadName = await db.TeamMembers.Where(m => m.TeamId == teamId && m.IsTeamLead).Select(m => m.Person!.Name).FirstOrDefaultAsync();
-        var coLeadName = await db.TeamMembers.Where(m => m.TeamId == teamId && m.IsCoLead).Select(m => m.Person!.Name).FirstOrDefaultAsync();
 
         return new TeamSettingsDto(
             team.Name, team.OrgName, team.TeamStrength, team.ShiftsCovered,
-            team.DefaultOffDays, team.CompOffsEnabled, activeMemberCount, leadName, coLeadName);
+            team.DefaultOffDays, team.CompOffsEnabled, activeMemberCount,
+            team.AutoApproveLeaveRequests, team.AutoApproveShiftSwaps);
     }
 
 }

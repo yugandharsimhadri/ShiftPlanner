@@ -1,0 +1,68 @@
+.onboarding-checklist {
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.onboarding-checklist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.onboarding-checklist-header h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.onboarding-checklist-dismiss {
+  background: transparent;
+  border: none;
+  color: var(--ink-faint);
+  font-size: 13px;
+  padding: 2px 6px;
+}
+
+.onboarding-checklist ul {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.onboarding-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.onboarding-checklist li.done {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+.onboarding-checklist-check {
+  width: 16px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.onboarding-checklist-link {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.onboarding-checklist-link:hover {
+  text-decoration: underline;
+}

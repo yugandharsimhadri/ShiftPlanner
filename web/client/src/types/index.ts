@@ -3,6 +3,8 @@ export type EmployeeStatus = 'Active' | 'Inactive'
 export type RosterEntrySource = 'Manual' | 'Copied'
 export type TeamRole = 'Viewer' | 'Editor' | 'Admin'
 export type CompOffStatus = 'Pending' | 'Used'
+export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled'
+export type SwapStatus = 'Open' | 'Claimed' | 'Approved' | 'Rejected' | 'Cancelled'
 export type DayOfWeekName =
   | 'Sunday'
   | 'Monday'
@@ -19,7 +21,6 @@ export const ALL_DAYS: DayOfWeekName[] = [
 export interface Track {
   id: number
   name: string
-  leadName: string | null
   color: string
   subtracks: Subtrack[]
 }
@@ -156,6 +157,7 @@ export interface RosterEntry {
   shiftCode: string | null
   source: RosterEntrySource
   note: string | null
+  acknowledgedAt: string | null
 }
 
 export interface RosterResponse {
@@ -167,6 +169,77 @@ export interface RosterResponse {
   shiftTypes: ShiftType[]
   holidays: Holiday[]
   defaultOffDays: DayOfWeekName[]
+  leaveRequests: LeaveRequest[]
+  isPublished: boolean
+}
+
+// --- Leave requests -----------------------------------------------------------
+
+export interface LeaveRequest {
+  id: number
+  teamMemberId: number
+  memberName: string
+  memberCode: string
+  startDate: string
+  endDate: string
+  reason: string | null
+  status: LeaveStatus
+  requestedAt: string
+  decidedAt: string | null
+  decisionNote: string | null
+}
+
+export interface CreateLeaveRequestInput {
+  startDate: string
+  endDate: string
+  reason?: string | null
+}
+
+// --- Shift swaps ----------------------------------------------------------------
+// A one-directional "someone else take my shift" offer, not a mutual trade.
+
+export interface ShiftSwapRequest {
+  id: number
+  offeredByTeamMemberId: number
+  offeredByName: string
+  date: string
+  shiftCode: string
+  targetTeamMemberId: number | null
+  targetName: string | null
+  claimedByTeamMemberId: number | null
+  claimedByName: string | null
+  status: SwapStatus
+  createdAt: string
+}
+
+export interface CreateShiftSwapInput {
+  date: string
+  shiftCode: string
+  targetTeamMemberId?: number | null
+}
+
+// --- Roster: bulk / pattern / publish / history / acknowledge -------------------
+
+export interface BulkEntryResult {
+  updatedCount: number
+  errors: string[]
+}
+
+export interface RosterPublishStatus {
+  isPublished: boolean
+  publishedAt: string | null
+}
+
+export interface RosterEntryHistoryRow {
+  id: number
+  teamMemberId: number
+  memberName: string
+  date: string
+  oldShiftCode: string | null
+  newShiftCode: string | null
+  changedByUserId: string
+  changedAt: string
+  source: string
 }
 
 export interface CopyForwardFlag {
@@ -207,8 +280,8 @@ export interface TeamSettings {
   defaultOffDays: DayOfWeekName[]
   compOffsEnabled: boolean
   activeMemberCount: number
-  leadName: string | null
-  coLeadName: string | null
+  autoApproveLeaveRequests: boolean
+  autoApproveShiftSwaps: boolean
 }
 
 export interface UpdateTeamSettingsInput {
@@ -218,6 +291,8 @@ export interface UpdateTeamSettingsInput {
   shiftsCovered?: string | null
   defaultOffDays: DayOfWeekName[]
   compOffsEnabled: boolean
+  autoApproveLeaveRequests: boolean
+  autoApproveShiftSwaps: boolean
 }
 
 // --- Comp-offs ---------------------------------------------------------------

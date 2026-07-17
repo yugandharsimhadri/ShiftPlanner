@@ -78,8 +78,8 @@ public static class DbSeeder
             IsTeamLead = true,
         });
 
-        var frontDesk = new Track { TeamId = team.Id, Name = "Front Desk", LeadName = "Priya Nair", Color = "#4453AD" };
-        var warehouse = new Track { TeamId = team.Id, Name = "Warehouse", LeadName = "Arjun Mehta", Color = "#A8701F" };
+        var frontDesk = new Track { TeamId = team.Id, Name = "Front Desk", Color = "#4453AD" };
+        var warehouse = new Track { TeamId = team.Id, Name = "Warehouse", Color = "#A8701F" };
         db.Tracks.AddRange(frontDesk, warehouse);
         db.SaveChanges();
 

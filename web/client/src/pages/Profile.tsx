@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getProfile, updateProfile } from '../api/endpoints'
+import { getCalendarFeedUrl, getProfile, updateProfile } from '../api/endpoints'
 import './Profile.css'
 
 function detectedTimezone(): string | null {
@@ -13,8 +13,7 @@ function detectedTimezone(): string | null {
 
 function timezoneOptions(): string[] {
   try {
-    // @ts-expect-error -- not in all TS lib targets yet, but supported by modern browsers.
-    const values = Intl.supportedValuesOf?.('timeZone') as string[] | undefined
+    const values = Intl.supportedValuesOf?.('timeZone')
     if (values && values.length > 0) return values
   } catch {
     // fall through to the manual fallback below
@@ -25,6 +24,8 @@ function timezoneOptions(): string[] {
 export default function Profile() {
   const queryClient = useQueryClient()
   const { data: profile } = useQuery({ queryKey: ['profile'], queryFn: getProfile })
+  const { data: calendarFeed } = useQuery({ queryKey: ['calendar-feed-url'], queryFn: getCalendarFeedUrl })
+  const [copied, setCopied] = useState(false)
 
   const [expiryHours, setExpiryHours] = useState('')
 
@@ -121,6 +122,29 @@ export default function Profile() {
               : `Default: 9 hours for India, 8 hours elsewhere — based on your timezone.`}
           </p>
         </div>
+      </section>
+
+      <section className="card settings-section">
+        <h3 style={{ marginTop: 0 }}>Subscribe to your shifts</h3>
+        <p className="field-hint" style={{ marginTop: -4 }}>
+          Add this link to Google Calendar, Outlook, or Apple Calendar to see your upcoming
+          shifts alongside everything else — it updates automatically.
+        </p>
+        {calendarFeed && (
+          <div className="inline-picker">
+            <input readOnly value={calendarFeed.url} style={{ flex: 1, fontFamily: 'var(--font-mono)', fontSize: 12 }} />
+            <button
+              className="btn-secondary"
+              onClick={async () => {
+                await navigator.clipboard.writeText(calendarFeed.url)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }}
+            >
+              {copied ? 'Copied!' : 'Copy link'}
+            </button>
+          </div>
+        )}
       </section>
     </div>
   )
