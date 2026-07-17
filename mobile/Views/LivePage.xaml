@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.LivePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    x:DataType="vm:LiveViewModel"
+    Title="Live">
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
+        <CollectionView ItemsSource="{Binding Members}">
+
+            <CollectionView.Header>
+                <VerticalStackLayout Padding="20,16,20,10" Spacing="14">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Live" Style="{StaticResource PageTitle}" />
+                        <Label
+                            Text="Who's actually free right now — separate from the planned roster."
+                            Style="{StaticResource SubtitleLabel}" />
+                    </VerticalStackLayout>
+
+                    <Label
+                        Text="{Binding ErrorMessage}"
+                        Style="{StaticResource CaptionLabel}"
+                        TextColor="{StaticResource ShiftLeaveFg}"
+                        IsVisible="{Binding HasError}" />
+
+                    <Border Style="{StaticResource CardBorder}" IsVisible="{Binding HasMyRow}">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                            <Label
+                                Grid.Row="0" Grid.Column="0"
+                                Text="{Binding MySelfLabel}"
+                                Style="{StaticResource ListTitleLabel}" />
+                            <Label
+                                Grid.Row="1" Grid.Column="0"
+                                Text="{Binding MySelfHint}"
+                                Style="{StaticResource CaptionLabel}" />
+                            <Button
+                                Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"
+                                Text="{Binding MySelfButtonText}"
+                                Style="{StaticResource GhostButton}"
+                                FontSize="13"
+                                VerticalOptions="Center"
+                                IsEnabled="{Binding CanToggleSelf}"
+                                Command="{Binding ToggleSelfCommand}" />
+                        </Grid>
+                    </Border>
+                </VerticalStackLayout>
+            </CollectionView.Header>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:LiveMemberRowViewModel">
+                    <Grid Padding="20,10" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12">
+                        <Label
+                            Grid.Row="0"
+                            Grid.Column="0"
+                            Text="{Binding Name}"
+                            Style="{StaticResource ListTitleLabel}"
+                            VerticalOptions="End" />
+                        <Label
+                            Grid.Row="1"
+                            Grid.Column="0"
+                            Text="{Binding Code}"
+                            Style="{StaticResource CaptionLabel}"
+                            VerticalOptions="Start" />
+                        <Border
+                            Grid.Row="0"
+                            Grid.RowSpan="2"
+                            Grid.Column="1"
+                            Style="{StaticResource ChipBorderBase}"
+                            BackgroundColor="{Binding StatusBackground}"
+                            VerticalOptions="Center">
+                            <Label
+                                Text="{Binding StatusLabel}"
+                                TextColor="{Binding StatusColor}"
+                                FontAttributes="Bold"
+                                FontSize="12" />
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="40" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Label Text="No active team members yet." Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+        </CollectionView>
+    </RefreshView>
+</ContentPage>

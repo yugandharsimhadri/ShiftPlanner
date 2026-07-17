@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.RequestsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    x:DataType="vm:RequestsViewModel"
+    Title="Requests">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Request leave" Command="{Binding RequestLeaveCommand}" />
+        <ToolbarItem Text="Offer shift" Command="{Binding OfferShiftCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
+        <ScrollView>
+            <VerticalStackLayout Padding="20,16" Spacing="20">
+
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Requests" Style="{StaticResource PageTitle}" />
+                    <Label Text="Leave and shift-swap requests for this team" Style="{StaticResource SubtitleLabel}" />
+                </VerticalStackLayout>
+
+                <Label
+                    Text="{Binding ErrorMessage}"
+                    Style="{StaticResource CaptionLabel}"
+                    TextColor="{StaticResource ShiftLeaveFg}"
+                    IsVisible="{Binding HasError}" />
+
+                <VerticalStackLayout Spacing="10" IsVisible="{Binding HasPendingApproval}">
+                    <Label Text="PENDING YOUR APPROVAL" Style="{StaticResource FieldLabel}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding PendingApproval}" Spacing="0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RequestRowViewModel">
+                                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,8" Padding="14">
+                                    <VerticalStackLayout Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                                <Label Text="{Binding Title}" Style="{StaticResource ListTitleLabel}" />
+                                                <Label Text="{Binding Subtitle}" Style="{StaticResource CaptionLabel}" />
+                                            </VerticalStackLayout>
+                                            <Border Grid.Column="1" Style="{StaticResource ChipBorderBase}" BackgroundColor="{Binding StatusBackground}" VerticalOptions="Center">
+                                                <Label Text="{Binding StatusLabel}" TextColor="{Binding StatusColor}" FontAttributes="Bold" FontSize="12" />
+                                            </Border>
+                                        </Grid>
+                                        <HorizontalStackLayout Spacing="16">
+                                            <Button Text="{Binding PrimaryActionText}" Style="{StaticResource GhostButton}" FontSize="13" Command="{Binding PrimaryActionCommand}" IsVisible="{Binding HasPrimaryAction}" />
+                                            <Button Text="{Binding SecondaryActionText}" Style="{StaticResource TextLinkButton}" FontSize="13" Command="{Binding SecondaryActionCommand}" IsVisible="{Binding HasSecondaryAction}" />
+                                        </HorizontalStackLayout>
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="10" IsVisible="{Binding HasOpenSwaps}">
+                    <Label Text="OPEN SWAPS YOU CAN CLAIM" Style="{StaticResource FieldLabel}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding OpenSwaps}" Spacing="0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RequestRowViewModel">
+                                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,8" Padding="14">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                            <Label Text="{Binding Title}" Style="{StaticResource ListTitleLabel}" />
+                                            <Label Text="{Binding Subtitle}" Style="{StaticResource CaptionLabel}" />
+                                        </VerticalStackLayout>
+                                        <Button Grid.Column="1" Text="{Binding PrimaryActionText}" Style="{StaticResource GhostButton}" FontSize="13" VerticalOptions="Center" Command="{Binding PrimaryActionCommand}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="MY REQUESTS" Style="{StaticResource FieldLabel}" />
+                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding MyRequests}" Spacing="0">
+                        <BindableLayout.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RequestRowViewModel">
+                                <Border Style="{StaticResource CardBorder}" Margin="0,0,0,8" Padding="14">
+                                    <VerticalStackLayout Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                                <Label Text="{Binding Title}" Style="{StaticResource ListTitleLabel}" />
+                                                <Label Text="{Binding Subtitle}" Style="{StaticResource CaptionLabel}" />
+                                            </VerticalStackLayout>
+                                            <Border Grid.Column="1" Style="{StaticResource ChipBorderBase}" BackgroundColor="{Binding StatusBackground}" VerticalOptions="Center">
+                                                <Label Text="{Binding StatusLabel}" TextColor="{Binding StatusColor}" FontAttributes="Bold" FontSize="12" />
+                                            </Border>
+                                        </Grid>
+                                        <Button Text="{Binding PrimaryActionText}" Style="{StaticResource TextLinkButton}" FontSize="13" HorizontalOptions="Start" Command="{Binding PrimaryActionCommand}" IsVisible="{Binding HasPrimaryAction}" />
+                                    </VerticalStackLayout>
+                                </Border>
+                            </DataTemplate>
+                        </BindableLayout.ItemTemplate>
+                    </VerticalStackLayout>
+                    <Label
+                        Text="No requests yet."
+                        Style="{StaticResource CaptionLabel}"
+                        IsVisible="{Binding HasNoMyRequests}" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

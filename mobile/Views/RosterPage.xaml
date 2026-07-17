@@ -15,6 +15,9 @@
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Copy fwd" Command="{Binding CopyForwardCommand}" IsEnabled="{Binding CanEdit}" />
         <ToolbarItem Text="Export" Command="{Binding ExportCommand}" />
+        <ToolbarItem Text="Bulk assign" Command="{Binding BulkAssignCommand}" IsEnabled="{Binding CanEdit}" />
+        <ToolbarItem Text="Apply pattern" Command="{Binding ApplyPatternCommand}" IsEnabled="{Binding CanEdit}" />
+        <ToolbarItem Text="History" Command="{Binding ViewHistoryCommand}" IsEnabled="{Binding CanEdit}" />
     </ContentPage.ToolbarItems>
 
     <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
@@ -45,6 +48,31 @@
                         Style="{StaticResource CaptionLabel}"
                         TextColor="{StaticResource ShiftLeaveFg}"
                         IsVisible="{Binding HasError}" />
+
+                    <Border Style="{StaticResource CardBorder}" IsVisible="{Binding ShowOnboardingChecklist}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <Label Grid.Column="0" Text="{Binding OnboardingMessage}" Style="{StaticResource CaptionLabel}" VerticalOptions="Center" />
+                            <Button Grid.Column="1" Text="Dismiss" Style="{StaticResource TextLinkButton}" FontSize="12" Command="{Binding DismissOnboardingCommand}" />
+                        </Grid>
+                    </Border>
+
+                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding CanEdit}">
+                        <Label Grid.Column="0" Text="{Binding PublishStatusLabel}" Style="{StaticResource CaptionLabel}" VerticalOptions="Center" />
+                        <Button
+                            Grid.Column="1"
+                            Text="Unpublish"
+                            Style="{StaticResource TextLinkButton}"
+                            FontSize="12"
+                            IsVisible="{Binding IsPublished}"
+                            Command="{Binding UnpublishCommand}" />
+                        <Button
+                            Grid.Column="1"
+                            Text="Publish"
+                            Style="{StaticResource GhostButton}"
+                            FontSize="12"
+                            IsVisible="{Binding IsNotPublished}"
+                            Command="{Binding PublishCommand}" />
+                    </Grid>
                 </VerticalStackLayout>
             </CollectionView.Header>
 
@@ -60,7 +88,7 @@
 
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:RosterEmployeeRowViewModel">
-                    <Grid Padding="20,10" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12">
+                    <Grid Padding="20,10" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12">
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer
                                 Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.TapShiftCommand}"
@@ -91,6 +119,17 @@
                                 FontAttributes="Bold"
                                 FontSize="12" />
                         </Border>
+                        <Button
+                            Grid.Row="2"
+                            Grid.Column="0"
+                            Grid.ColumnSpan="2"
+                            Text="Acknowledge"
+                            Style="{StaticResource TextLinkButton}"
+                            FontSize="12"
+                            HorizontalOptions="Start"
+                            IsVisible="{Binding CanAcknowledge}"
+                            Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.AcknowledgeCommand}"
+                            CommandParameter="{Binding .}" />
                     </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>

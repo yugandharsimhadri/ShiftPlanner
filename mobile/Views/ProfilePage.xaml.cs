@@ -20,5 +20,6 @@ public partial class ProfilePage : ContentPage
         // Reflect a login/logout that happened elsewhere since this page was constructed
         // (ShellContent pages are cached and reused between tab visits).
         _viewModel.Refresh();
+        _viewModel.LoadCalendarFeedCommand.Execute(null);
     }
 }

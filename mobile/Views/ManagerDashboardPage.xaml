@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.ManagerDashboardPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    xmlns:models="clr-namespace:ShiftPlanner.Mobile.Models"
+    x:DataType="vm:ManagerDashboardViewModel"
+    Title="Teams you manage">
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
+        <ScrollView>
+            <VerticalStackLayout Padding="20,16" Spacing="20">
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Teams you manage" Style="{StaticResource PageTitle}" />
+                    <Label Text="Read-only live availability across every team you've been granted oversight of." Style="{StaticResource SubtitleLabel}" />
+                </VerticalStackLayout>
+
+                <Label
+                    Text="{Binding ErrorMessage}"
+                    Style="{StaticResource CaptionLabel}"
+                    TextColor="{StaticResource ShiftLeaveFg}"
+                    IsVisible="{Binding HasError}" />
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Teams}" Spacing="16">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="models:ManagerTeamAvailability">
+                            <VerticalStackLayout Spacing="8">
+                                <Label Text="{Binding TeamName}" Style="{StaticResource FieldLabel}" />
+                                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Members}" Spacing="0">
+                                    <BindableLayout.ItemTemplate>
+                                        <DataTemplate x:DataType="models:TeamMemberAvailability">
+                                            <Border Style="{StaticResource CardBorder}" Margin="0,0,0,8" Padding="14">
+                                                <Grid ColumnDefinitions="*,Auto">
+                                                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                                        <Label Text="{Binding Name}" Style="{StaticResource ListTitleLabel}" />
+                                                        <Label Text="{Binding Code}" Style="{StaticResource CaptionLabel}" />
+                                                    </VerticalStackLayout>
+                                                    <Label
+                                                        Grid.Column="1"
+                                                        Style="{StaticResource CaptionLabel}"
+                                                        VerticalOptions="Center"
+                                                        Text="Not available">
+                                                        <Label.Triggers>
+                                                            <DataTrigger TargetType="Label" Binding="{Binding IsAvailable}" Value="True">
+                                                                <Setter Property="Text" Value="Available" />
+                                                                <Setter Property="TextColor" Value="{StaticResource AccentLight}" />
+                                                            </DataTrigger>
+                                                        </Label.Triggers>
+                                                    </Label>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </BindableLayout.ItemTemplate>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
+                <Label
+                    Text="You don't manage any other teams yet."
+                    Style="{StaticResource CaptionLabel}"
+                    IsVisible="{Binding HasNoManagedTeams}" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </RefreshView>
+</ContentPage>

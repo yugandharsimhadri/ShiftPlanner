@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.ReportsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    xmlns:models="clr-namespace:ShiftPlanner.Mobile.Models"
+    x:DataType="vm:ReportsViewModel"
+    Title="Reports">
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
+        <CollectionView ItemsSource="{Binding Rows}">
+            <CollectionView.Header>
+                <VerticalStackLayout Padding="20,16,20,10" Spacing="14">
+                    <VerticalStackLayout Spacing="2">
+                        <Label Text="Reports" Style="{StaticResource PageTitle}" />
+                        <Label Text="Utilization and comp-off standing for a date range" Style="{StaticResource SubtitleLabel}" />
+                    </VerticalStackLayout>
+
+                    <Label
+                        Text="{Binding ErrorMessage}"
+                        Style="{StaticResource CaptionLabel}"
+                        TextColor="{StaticResource ShiftLeaveFg}"
+                        IsVisible="{Binding HasError}" />
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="START" Style="{StaticResource FieldLabel}" />
+                            <DatePicker Date="{Binding StartDate}" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="END" Style="{StaticResource FieldLabel}" />
+                            <DatePicker Date="{Binding EndDate}" />
+                        </VerticalStackLayout>
+                    </Grid>
+                    <Button Text="Run report" Style="{StaticResource GhostButton}" HorizontalOptions="Start" Command="{Binding LoadCommand}" />
+                </VerticalStackLayout>
+            </CollectionView.Header>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:UtilizationRow">
+                    <Border Style="{StaticResource CardBorder}" Margin="20,0,20,8" Padding="14">
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding MemberName}" Style="{StaticResource ListTitleLabel}" />
+                            <Label Text="{Binding TrackName}" Style="{StaticResource CaptionLabel}" />
+                            <Label Style="{StaticResource CaptionLabel}">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="Shifts: " />
+                                        <Span Text="{Binding TotalShiftsWorked}" FontAttributes="Bold" />
+                                        <Span Text="  Weekend: " />
+                                        <Span Text="{Binding WeekendShiftsWorked}" FontAttributes="Bold" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                            <Label Style="{StaticResource CaptionLabel}">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="Comp-offs — earned: " />
+                                        <Span Text="{Binding CompOffsEarned}" FontAttributes="Bold" />
+                                        <Span Text="  used: " />
+                                        <Span Text="{Binding CompOffsUsed}" FontAttributes="Bold" />
+                                        <Span Text="  pending: " />
+                                        <Span Text="{Binding CompOffsPending}" FontAttributes="Bold" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="40" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Label Text="No data for this range yet." Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+        </CollectionView>
+    </RefreshView>
+</ContentPage>

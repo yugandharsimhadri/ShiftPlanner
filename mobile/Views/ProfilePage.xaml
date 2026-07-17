@@ -34,6 +34,29 @@
                         FontSize="14"
                         HorizontalOptions="Start"
                         Command="{Binding SwitchTeamCommand}" />
+                    <Button
+                        Text="View teams you manage"
+                        Style="{StaticResource TextLinkButton}"
+                        FontSize="13"
+                        HorizontalOptions="Start"
+                        Command="{Binding ViewManagerDashboardCommand}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Border Style="{StaticResource CardBorder}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="SUBSCRIBE TO YOUR SHIFTS" Style="{StaticResource FieldLabel}" />
+                    <Label
+                        Text="Add this link to your phone's calendar app to see your upcoming shifts alongside everything else."
+                        Style="{StaticResource CaptionLabel}" />
+                    <Label Text="{Binding CalendarFeedUrl}" Style="{StaticResource CaptionLabel}" LineBreakMode="CharacterWrap" />
+                    <Button
+                        Text="Copy link"
+                        Style="{StaticResource GhostButton}"
+                        FontSize="14"
+                        HorizontalOptions="Start"
+                        Command="{Binding CopyCalendarLinkCommand}" />
+                    <ActivityIndicator IsRunning="{Binding IsLoadingCalendarFeed}" IsVisible="{Binding IsLoadingCalendarFeed}" HorizontalOptions="Center" />
                 </VerticalStackLayout>
             </Border>
 

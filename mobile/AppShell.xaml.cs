@@ -9,9 +9,16 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
 
-        // Pushed on top of the Team Members tab (add/edit form) rather than being a tab
-        // itself — registered here since it's not in the TabBar markup above.
+        // Pushed on top of a tab (forms/wizards/detail pages) rather than being a tab
+        // itself — registered here since none of these are in the TabBar markup above.
         Routing.RegisterRoute("teammemberform", typeof(TeamMemberFormPage));
+        Routing.RegisterRoute("leaverequestform", typeof(LeaveRequestFormPage));
+        Routing.RegisterRoute("shiftswapform", typeof(ShiftSwapFormPage));
+        Routing.RegisterRoute("bulkassign", typeof(BulkAssignPage));
+        Routing.RegisterRoute("applypattern", typeof(ApplyPatternPage));
+        Routing.RegisterRoute("rosterhistory", typeof(RosterHistoryPage));
+        Routing.RegisterRoute("managerdashboard", typeof(ManagerDashboardPage));
+        Routing.RegisterRoute("reports", typeof(ReportsPage));
 
         Loaded += OnShellLoaded;
     }

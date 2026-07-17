@@ -22,13 +22,19 @@
         ContentTemplate="{DataTemplate views:TeamGatePage}"
         Shell.NavBarIsVisible="False" />
 
-    <!-- All five tabs are always present for every role — each screen gates its own edit
+    <!-- All six tabs are always present for every role — each screen gates its own edit
          affordances by AppSettingsStore.CurrentTeamCanEdit / CurrentTeamIsAdmin instead of
          the tab bar changing shape per role. A Viewer simply sees no "+"/"Delete"/"Invite"
          controls on screens they can't act on. See the plan's §08 for the reasoning. -->
     <TabBar Route="main">
         <Tab Title="Roster" Route="roster">
             <ShellContent ContentTemplate="{DataTemplate views:RosterPage}" />
+        </Tab>
+        <Tab Title="Live" Route="live">
+            <ShellContent ContentTemplate="{DataTemplate views:LivePage}" />
+        </Tab>
+        <Tab Title="Requests" Route="requests">
+            <ShellContent ContentTemplate="{DataTemplate views:RequestsPage}" />
         </Tab>
         <Tab Title="Team Members" Route="members">
             <ShellContent ContentTemplate="{DataTemplate views:TeamMembersPage}" />

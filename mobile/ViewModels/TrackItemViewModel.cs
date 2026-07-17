@@ -8,7 +8,6 @@ public sealed class TrackItemViewModel
     public required Track Track { get; init; }
     public int Id => Track.Id;
     public string Name => Track.Name;
-    public string LeadLabel => string.IsNullOrWhiteSpace(Track.LeadName) ? "No lead set" : $"Lead: {Track.LeadName}";
     public Color SwatchColor => Color.TryParse(Track.Color, out var c) ? c : Colors.Gray;
 
     public string SubtracksLabel => Track.Subtracks.Count == 0

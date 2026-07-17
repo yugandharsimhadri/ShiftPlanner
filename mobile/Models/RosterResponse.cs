@@ -14,13 +14,27 @@ public sealed class RosterResponse
     public List<RosterEntryDto> Entries { get; set; } = new();
     public List<RosterTeamMemberDto> TeamMembers { get; set; } = new();
     public List<ShiftTypeDto> ShiftTypes { get; set; } = new();
+    public List<HolidayDto> Holidays { get; set; } = new();
+    public List<DayOfWeek> DefaultOffDays { get; set; } = new();
+    public List<LeaveRequest> LeaveRequests { get; set; } = new();
+    public bool IsPublished { get; set; }
 }
 
 public sealed class RosterEntryDto
 {
+    public int Id { get; set; }
     public int TeamMemberId { get; set; }
     public DateOnly Date { get; set; }
     public string? ShiftCode { get; set; }
+    public string? Note { get; set; }
+    public DateTimeOffset? AcknowledgedAt { get; set; }
+}
+
+public sealed class HolidayDto
+{
+    public int Id { get; set; }
+    public DateOnly Date { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
 /// <summary>Just the fields the Roster day view actually reads — the real payload carries

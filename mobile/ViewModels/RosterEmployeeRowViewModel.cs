@@ -12,6 +12,16 @@ public sealed class RosterEmployeeRowViewModel
     public Color ChipForeground { get; init; } = Colors.Transparent;
     public Color ChipBackground { get; init; } = Colors.Transparent;
     public bool IsMe { get; init; }
+
+    /// <summary>True when this member has an approved leave request covering this date —
+    /// used both for the chip's no-shift context label and to warn before assigning a
+    /// shift on top of it.</summary>
+    public bool IsOnLeave { get; init; }
+
+    /// <summary>The roster entry id and whether it's already acknowledged — null entry
+    /// id means there's nothing to acknowledge (no shift assigned that day).</summary>
+    public int? EntryId { get; init; }
+    public bool CanAcknowledge { get; init; }
 }
 
 /// <summary>A track's worth of rows, for the Roster CollectionView's grouping.</summary>

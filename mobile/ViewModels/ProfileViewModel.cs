@@ -1,11 +1,14 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Maui.ApplicationModel.DataTransfer;
 using ShiftPlanner.Mobile.Services;
 
 namespace ShiftPlanner.Mobile.ViewModels;
 
 public partial class ProfileViewModel : ObservableObject
 {
+    private readonly ApiClient _api;
+
     [ObservableProperty]
     private string userEmail = string.Empty;
 
@@ -27,8 +30,15 @@ public partial class ProfileViewModel : ObservableObject
 
     public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
 
-    public ProfileViewModel()
+    [ObservableProperty]
+    private string calendarFeedUrl = string.Empty;
+
+    [ObservableProperty]
+    private bool isLoadingCalendarFeed;
+
+    public ProfileViewModel(ApiClient api)
     {
+        _api = api;
         Refresh();
     }
 
@@ -85,6 +95,45 @@ public partial class ProfileViewModel : ObservableObject
         if (Shell.Current is not null)
         {
             await Shell.Current.GoToAsync("//login");
+        }
+    }
+
+    [RelayCommand]
+    private async Task LoadCalendarFeedAsync()
+    {
+        try
+        {
+            IsLoadingCalendarFeed = true;
+            CalendarFeedUrl = await _api.GetCalendarFeedUrlAsync();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = ex is ApiException apiEx ? apiEx.Message : $"Couldn't load your calendar feed link. {ex.Message}";
+        }
+        finally
+        {
+            IsLoadingCalendarFeed = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CopyCalendarLinkAsync()
+    {
+        if (string.IsNullOrWhiteSpace(CalendarFeedUrl))
+        {
+            return;
+        }
+
+        await Clipboard.Default.SetTextAsync(CalendarFeedUrl);
+        StatusMessage = "Calendar link copied.";
+    }
+
+    [RelayCommand]
+    private static async Task ViewManagerDashboardAsync()
+    {
+        if (Shell.Current is not null)
+        {
+            await Shell.Current.GoToAsync("managerdashboard");
         }
     }
 }

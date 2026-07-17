@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ShiftPlanner.Mobile.Models;
 using Location = ShiftPlanner.Mobile.Models.Location;
 
@@ -15,7 +16,13 @@ namespace ShiftPlanner.Mobile.Services;
 /// </summary>
 public sealed class ApiClient
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    // The backend serializes enums as strings (JsonStringEnumConverter registered in
+    // Program.cs) — e.g. RosterResponse.DefaultOffDays comes back as ["Saturday","Sunday"],
+    // not [6,0]. Mirror that here so DayOfWeek (and any future enum-typed field) deserializes.
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     private readonly HttpClient _http;
 
@@ -103,12 +110,271 @@ public sealed class ApiClient
 
     /// <summary>Assigns, changes, or clears (shiftCode: null) one team member's shift on one date.
     /// Requires Editor or Admin on the current team — the server returns 403 otherwise.</summary>
-    public async Task UpsertRosterEntryAsync(int teamMemberId, DateOnly date, string? shiftCode, CancellationToken cancellationToken = default)
+    public async Task UpsertRosterEntryAsync(int teamMemberId, DateOnly date, string? shiftCode, string? note = null, CancellationToken cancellationToken = default)
     {
-        var body = new RosterEntryUpsertRequest { TeamMemberId = teamMemberId, Date = date, ShiftCode = shiftCode };
+        var body = new RosterEntryUpsertRequest { TeamMemberId = teamMemberId, Date = date, ShiftCode = shiftCode, Note = note };
         var request = await CreateRequestAsync(HttpMethod.Put, ApiRoutes.RosterEntry, attachAuth: true, body: body);
         using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response);
+    }
+
+    /// <summary>Assigns the same shift to every (member, date) combination in the cross-product.
+    /// Errors are collected per-row rather than aborting the whole batch.</summary>
+    public async Task<BulkEntryResult> BulkAssignAsync(List<int> teamMemberIds, List<DateOnly> dates, string? shiftCode, CancellationToken cancellationToken = default)
+    {
+        var body = new BulkRosterEntryBody { TeamMemberIds = teamMemberIds, Dates = dates, ShiftCode = shiftCode };
+        var request = await CreateRequestAsync(HttpMethod.Post, ApiRoutes.RosterBulkEntry, attachAuth: true, body: body);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<BulkEntryResult>(JsonOptions, cancellationToken) ?? new BulkEntryResult();
+    }
+
+    /// <summary>Applies a per-weekday shift pattern across a whole month for the given members.</summary>
+    public async Task<BulkEntryResult> ApplyPatternAsync(ApplyPatternBody body, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, ApiRoutes.RosterApplyPattern, attachAuth: true, body: body);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<BulkEntryResult>(JsonOptions, cancellationToken) ?? new BulkEntryResult();
+    }
+
+    public async Task<RosterPublishStatus> GetRosterPublishStatusAsync(int year, int month, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, $"{ApiRoutes.RosterPublishStatus}?year={year}&month={month}", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<RosterPublishStatus>(JsonOptions, cancellationToken) ?? new RosterPublishStatus();
+    }
+
+    public async Task<RosterPublishStatus> PublishRosterAsync(int year, int month, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{ApiRoutes.RosterPublish}?year={year}&month={month}", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<RosterPublishStatus>(JsonOptions, cancellationToken) ?? new RosterPublishStatus();
+    }
+
+    public async Task<RosterPublishStatus> UnpublishRosterAsync(int year, int month, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{ApiRoutes.RosterUnpublish}?year={year}&month={month}", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<RosterPublishStatus>(JsonOptions, cancellationToken) ?? new RosterPublishStatus();
+    }
+
+    public async Task<List<RosterEntryHistoryRow>> GetRosterHistoryAsync(int year, int month, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, $"{ApiRoutes.RosterHistory}?year={year}&month={month}", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<RosterEntryHistoryRow>>(JsonOptions, cancellationToken) ?? new List<RosterEntryHistoryRow>();
+    }
+
+    /// <summary>A "seen it" signal on the caller's own upcoming shift — not a requirement.</summary>
+    public async Task AcknowledgeRosterEntryAsync(int entryId, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Patch, $"{ApiRoutes.RosterEntry}/{entryId}/acknowledge", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+    }
+
+    // ---- Live availability ----
+
+    public async Task<List<TeamMemberAvailability>> GetTeamAvailabilityAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.TeamAvailability, attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<TeamMemberAvailability>>(JsonOptions, cancellationToken) ?? new List<TeamMemberAvailability>();
+    }
+
+    public async Task<TeamMemberAvailability> UpdateMyAvailabilityAsync(bool isAvailable, CancellationToken cancellationToken = default)
+    {
+        var body = new UpdateAvailabilityBody { IsAvailable = isAvailable };
+        var request = await CreateRequestAsync(HttpMethod.Patch, ApiRoutes.MyAvailability, attachAuth: true, body: body);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<TeamMemberAvailability>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response updating availability.");
+    }
+
+    // ---- Managers ----
+
+    public async Task<List<ManagerAssignment>> GetManagersAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.Managers, attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<ManagerAssignment>>(JsonOptions, cancellationToken) ?? new List<ManagerAssignment>();
+    }
+
+    public async Task<List<PersonSearchResult>> SearchManagerCandidatesAsync(string phone, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, $"{ApiRoutes.ManagersSearch}?phone={Uri.EscapeDataString(phone)}", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<PersonSearchResult>>(JsonOptions, cancellationToken) ?? new List<PersonSearchResult>();
+    }
+
+    public async Task<ManagerAssignment> GrantManagerAsync(Guid personId, CancellationToken cancellationToken = default)
+    {
+        var body = new GrantManagerBody { PersonId = personId };
+        var request = await CreateRequestAsync(HttpMethod.Post, ApiRoutes.Managers, attachAuth: true, body: body);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<ManagerAssignment>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response granting manager access.");
+    }
+
+    public async Task RevokeManagerAsync(int assignmentId, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Delete, $"{ApiRoutes.Managers}/{assignmentId}", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+    }
+
+    /// <summary>Every team the signed-in person manages — not team-scoped.</summary>
+    public async Task<List<ManagerTeam>> GetManagedTeamsAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.ManagerTeams, attachAuth: true, attachTeam: false);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<ManagerTeam>>(JsonOptions, cancellationToken) ?? new List<ManagerTeam>();
+    }
+
+    /// <summary>Live availability across every team the signed-in person manages — not team-scoped.</summary>
+    public async Task<List<ManagerTeamAvailability>> GetManagerAvailabilityAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.ManagerAvailability, attachAuth: true, attachTeam: false);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<ManagerTeamAvailability>>(JsonOptions, cancellationToken) ?? new List<ManagerTeamAvailability>();
+    }
+
+    // ---- Reports ----
+
+    public async Task<List<UtilizationRow>> GetUtilizationReportAsync(DateOnly start, DateOnly end, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, $"{ApiRoutes.ReportsUtilization}?start={start:yyyy-MM-dd}&end={end:yyyy-MM-dd}", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<UtilizationRow>>(JsonOptions, cancellationToken) ?? new List<UtilizationRow>();
+    }
+
+    // ---- Leave requests ----
+
+    public async Task<List<LeaveRequest>> GetLeaveRequestsAsync(string? status = null, CancellationToken cancellationToken = default)
+    {
+        var route = string.IsNullOrWhiteSpace(status) ? ApiRoutes.LeaveRequests : $"{ApiRoutes.LeaveRequests}?status={status}";
+        var request = await CreateRequestAsync(HttpMethod.Get, route, attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<LeaveRequest>>(JsonOptions, cancellationToken) ?? new List<LeaveRequest>();
+    }
+
+    public async Task<LeaveRequest> CreateLeaveRequestAsync(DateOnly startDate, DateOnly endDate, string? reason, CancellationToken cancellationToken = default)
+    {
+        var body = new CreateLeaveRequestBody { StartDate = startDate, EndDate = endDate, Reason = reason };
+        var request = await CreateRequestAsync(HttpMethod.Post, ApiRoutes.LeaveRequests, attachAuth: true, body: body);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<LeaveRequest>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response requesting leave.");
+    }
+
+    public async Task<LeaveRequest> ApproveLeaveRequestAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{ApiRoutes.LeaveRequests}/{id}/approve", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<LeaveRequest>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response approving the request.");
+    }
+
+    public async Task<LeaveRequest> RejectLeaveRequestAsync(int id, string? decisionNote = null, CancellationToken cancellationToken = default)
+    {
+        var body = new DecideLeaveRequestBody { DecisionNote = decisionNote };
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{ApiRoutes.LeaveRequests}/{id}/reject", attachAuth: true, body: body);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<LeaveRequest>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response rejecting the request.");
+    }
+
+    public async Task<LeaveRequest> CancelLeaveRequestAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{ApiRoutes.LeaveRequests}/{id}/cancel", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<LeaveRequest>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response cancelling the request.");
+    }
+
+    // ---- Shift swaps ----
+
+    public async Task<List<ShiftSwapRequest>> GetShiftSwapsAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.ShiftSwaps, attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<List<ShiftSwapRequest>>(JsonOptions, cancellationToken) ?? new List<ShiftSwapRequest>();
+    }
+
+    public async Task<ShiftSwapRequest> CreateShiftSwapAsync(DateOnly date, string shiftCode, int? targetTeamMemberId, CancellationToken cancellationToken = default)
+    {
+        var body = new CreateShiftSwapBody { Date = date, ShiftCode = shiftCode, TargetTeamMemberId = targetTeamMemberId };
+        var request = await CreateRequestAsync(HttpMethod.Post, ApiRoutes.ShiftSwaps, attachAuth: true, body: body);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<ShiftSwapRequest>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response offering the shift.");
+    }
+
+    public async Task<ShiftSwapRequest> ClaimShiftSwapAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{ApiRoutes.ShiftSwaps}/{id}/claim", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<ShiftSwapRequest>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response claiming the swap.");
+    }
+
+    public async Task<ShiftSwapRequest> ApproveShiftSwapAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{ApiRoutes.ShiftSwaps}/{id}/approve", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<ShiftSwapRequest>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response approving the swap.");
+    }
+
+    public async Task<ShiftSwapRequest> RejectShiftSwapAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{ApiRoutes.ShiftSwaps}/{id}/reject", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<ShiftSwapRequest>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response rejecting the swap.");
+    }
+
+    public async Task<ShiftSwapRequest> CancelShiftSwapAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Post, $"{ApiRoutes.ShiftSwaps}/{id}/cancel", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<ShiftSwapRequest>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response cancelling the swap.");
+    }
+
+    // ---- Calendar feed ----
+
+    public async Task<string> GetCalendarFeedUrlAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.CalendarFeedUrl, attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        var doc = await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions, cancellationToken);
+        return doc.TryGetProperty("url", out var url) ? url.GetString() ?? string.Empty : string.Empty;
     }
 
     /// <summary>Copies a source month's roster onto a target month, by weekday pattern or exact
@@ -186,6 +452,49 @@ public sealed class ApiClient
         var request = await CreateRequestAsync(HttpMethod.Delete, $"{ApiRoutes.Members}/{id}", attachAuth: true);
         using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response);
+    }
+
+    /// <summary>Transfers the "Lead" label to this member — any Admin can call this (a
+    /// Team Settings configuration action), and at most one lead per team is enforced
+    /// server-side by unsetting whoever had it before.</summary>
+    public async Task<TeamMember> TransferLeadAsync(int memberId, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Patch, $"{ApiRoutes.Members}/{memberId}/lead", attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<TeamMember>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response transferring the lead.");
+    }
+
+    /// <summary>Sets or clears the "Co-Lead" label — at most one at a time.</summary>
+    public async Task<TeamMember> SetCoLeadAsync(int memberId, bool isCoLead, CancellationToken cancellationToken = default)
+    {
+        var body = new { isCoLead };
+        var request = await CreateRequestAsync(HttpMethod.Patch, $"{ApiRoutes.Members}/{memberId}/co-lead", attachAuth: true, body: body);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<TeamMember>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response changing the co-lead.");
+    }
+
+    // ---- Team settings ----
+
+    public async Task<TeamSettings> GetTeamSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Get, ApiRoutes.TeamSettings, attachAuth: true);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<TeamSettings>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response loading team settings.");
+    }
+
+    public async Task<TeamSettings> UpdateTeamSettingsAsync(UpdateTeamSettingsRequest input, CancellationToken cancellationToken = default)
+    {
+        var request = await CreateRequestAsync(HttpMethod.Put, ApiRoutes.TeamSettings, attachAuth: true, body: input);
+        using var response = await SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response);
+        return await response.Content.ReadFromJsonAsync<TeamSettings>(JsonOptions, cancellationToken)
+            ?? throw new ApiException("The server returned an empty response saving team settings.");
     }
 
     // ---- Tracks / subtracks ----

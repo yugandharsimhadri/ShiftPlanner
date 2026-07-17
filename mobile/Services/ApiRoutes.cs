@@ -34,6 +34,9 @@ public static class ApiRoutes
     /// <summary>GET — a suggested next team member code, e.g. "EMP-004".</summary>
     public const string MembersNextCode = "api/teams/current/members/next-code";
 
+    /// <summary>GET/PUT — team-wide settings (name, auto-approve toggles, etc).</summary>
+    public const string TeamSettings = "api/teams/current/settings";
+
     /// <summary>GET/POST — team's tracks (with nested subtracks). PUT/DELETE {id} for one track.</summary>
     public const string Tracks = "api/tracks";
 
@@ -54,4 +57,44 @@ public static class ApiRoutes
 
     /// <summary>GET ?year=&amp;month= — the month's roster as a .csv file.</summary>
     public const string ExportCsv = "api/export/csv";
+
+    /// <summary>POST — assign the same shift to many (member, date) combinations at once.</summary>
+    public const string RosterBulkEntry = "api/roster/bulk-entry";
+
+    /// <summary>POST — apply a per-weekday shift pattern across a whole month.</summary>
+    public const string RosterApplyPattern = "api/roster/apply-pattern";
+
+    /// <summary>GET/POST/POST — draft vs published status for one roster month.</summary>
+    public const string RosterPublishStatus = "api/roster/publish-status";
+    public const string RosterPublish = "api/roster/publish";
+    public const string RosterUnpublish = "api/roster/unpublish";
+
+    /// <summary>GET ?year=&amp;month= — recent roster-cell change history for that month.</summary>
+    public const string RosterHistory = "api/roster/history";
+
+    /// <summary>GET/PATCH — a member's own live "free right now" status, and the team's.</summary>
+    public const string TeamAvailability = "api/teams/current/availability";
+    public const string MyAvailability = "api/teams/current/members/me/availability";
+
+    /// <summary>GET/POST/DELETE — who has cross-team oversight of this team's availability.</summary>
+    public const string Managers = "api/teams/current/managers";
+    public const string ManagersSearch = "api/teams/current/managers/search";
+
+    /// <summary>GET — every team the signed-in person manages, and their live availability.
+    /// Not team-scoped (no X-Team-Id needed).</summary>
+    public const string ManagerTeams = "api/manager/teams";
+    public const string ManagerAvailability = "api/manager/availability";
+
+    /// <summary>GET ?start=&amp;end= — utilization + comp-off standing per active member.</summary>
+    public const string ReportsUtilization = "api/reports/utilization";
+
+    /// <summary>GET/POST — leave requests: list (own, or all if Editor+), create.
+    /// POST {id}/approve|reject|cancel to decide one.</summary>
+    public const string LeaveRequests = "api/leave-requests";
+
+    /// <summary>GET/POST — shift-swap offers: list, create. POST {id}/claim|approve|reject|cancel.</summary>
+    public const string ShiftSwaps = "api/shift-swaps";
+
+    /// <summary>GET — the caller's subscribable .ics calendar feed URL (lazily generated).</summary>
+    public const string CalendarFeedUrl = "api/me/calendar-feed-url";
 }

@@ -23,6 +23,40 @@ public static class ShiftStyle
     private static readonly Color LeaveFg = Color.FromArgb("#A5392B");
     private static readonly Color LeaveBg = Color.FromArgb("#FBE7E3");
 
+    private static readonly Color HolidayFg = Color.FromArgb("#6B4C93");
+    private static readonly Color HolidayBg = Color.FromArgb("#EFE7F5");
+
+    private static readonly Color UnassignedFg = Color.FromArgb("#8A6D1B");
+    private static readonly Color UnassignedBg = Color.FromArgb("#FBF3DC");
+
+    /// <summary>Why a member has no shift on a given day — distinguishes states that
+    /// otherwise all look identical ("nothing assigned"), matching Web's shift-context
+    /// clarity: on approved leave, a team holiday, their default off day, or genuinely
+    /// unassigned on a working day (the one that most needs a manager's attention).</summary>
+    public enum NoShiftContext
+    {
+        Unassigned,
+        DefaultOff,
+        Holiday,
+        Leave,
+    }
+
+    public static string LabelFor(NoShiftContext context) => context switch
+    {
+        NoShiftContext.Leave => "On leave",
+        NoShiftContext.Holiday => "Holiday",
+        NoShiftContext.DefaultOff => "Off",
+        _ => "Unassigned",
+    };
+
+    public static (Color Foreground, Color Background) ResolveContext(NoShiftContext context) => context switch
+    {
+        NoShiftContext.Leave => (LeaveFg, LeaveBg),
+        NoShiftContext.Holiday => (HolidayFg, HolidayBg),
+        NoShiftContext.DefaultOff => (OffFg, OffBg),
+        _ => (UnassignedFg, UnassignedBg),
+    };
+
     public static (Color Foreground, Color Background) Resolve(string? shiftCode, string? serverColorHex)
     {
         var normalized = (shiftCode ?? string.Empty).Trim().ToUpperInvariant();

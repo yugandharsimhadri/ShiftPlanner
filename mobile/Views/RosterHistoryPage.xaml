@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ContentPage
+    x:Class="ShiftPlanner.Mobile.Views.RosterHistoryPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:ShiftPlanner.Mobile.ViewModels"
+    xmlns:models="clr-namespace:ShiftPlanner.Mobile.Models"
+    x:DataType="vm:RosterHistoryViewModel"
+    Title="History">
+
+    <RefreshView IsRefreshing="{Binding IsRefreshing}" Command="{Binding LoadCommand}">
+        <CollectionView ItemsSource="{Binding Rows}">
+            <CollectionView.Header>
+                <VerticalStackLayout Padding="20,16,20,10" Spacing="8">
+                    <Label Text="History" Style="{StaticResource PageTitle}" />
+                    <Label Text="Recent roster changes for this month" Style="{StaticResource SubtitleLabel}" />
+                    <Label
+                        Text="{Binding ErrorMessage}"
+                        Style="{StaticResource CaptionLabel}"
+                        TextColor="{StaticResource ShiftLeaveFg}"
+                        IsVisible="{Binding HasError}" />
+                </VerticalStackLayout>
+            </CollectionView.Header>
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:RosterEntryHistoryRow">
+                    <Border Style="{StaticResource CardBorder}" Margin="20,0,20,8" Padding="14">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="{Binding MemberName}" Style="{StaticResource ListTitleLabel}" />
+                            <Label Style="{StaticResource CaptionLabel}">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding Date, StringFormat='{0:MMM d}'}" />
+                                        <Span Text=" — " />
+                                        <Span Text="{Binding OldShiftCode, TargetNullValue='(none)'}" />
+                                        <Span Text=" → " />
+                                        <Span Text="{Binding NewShiftCode, TargetNullValue='(none)'}" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                            <Label Style="{StaticResource CaptionLabel}">
+                                <Label.FormattedText>
+                                    <FormattedString>
+                                        <Span Text="{Binding Source}" />
+                                        <Span Text=" · " />
+                                        <Span Text="{Binding ChangedAt, StringFormat='{0:MMM d, h:mm tt}'}" />
+                                    </FormattedString>
+                                </Label.FormattedText>
+                            </Label>
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+            <CollectionView.EmptyView>
+                <VerticalStackLayout Padding="40" HorizontalOptions="Center" VerticalOptions="Center">
+                    <Label Text="No changes recorded yet this month." Style="{StaticResource CaptionLabel}" HorizontalTextAlignment="Center" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+        </CollectionView>
+    </RefreshView>
+</ContentPage>
